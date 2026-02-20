@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ["Space Grotesk", "sans-serif"],
+        body: ["Inter", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -56,6 +60,16 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        category: {
+          today: "hsl(var(--category-today))",
+          "today-bg": "hsl(var(--category-today-bg))",
+          week: "hsl(var(--category-week))",
+          "week-bg": "hsl(var(--category-week-bg))",
+          next: "hsl(var(--category-next))",
+          "next-bg": "hsl(var(--category-next-bg))",
+          others: "hsl(var(--category-others))",
+          "others-bg": "hsl(var(--category-others-bg))",
         },
       },
       borderRadius: {
