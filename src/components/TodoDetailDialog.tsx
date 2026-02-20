@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +21,20 @@ type Props = {
 export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, readOnly }: Props) {
   const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
+  const [localNotes, setLocalNotes] = useState(todo?.notes || "");
   const fileRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    setLocalNotes(todo?.notes || "");
+  }, [todo?.id, todo?.notes]);
+
+  const debouncedUpdateNotes = useCallback((id: string, value: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onUpdate(id, { notes: value });
+    }, 500);
+  }, [onUpdate]);
 
   if (!todo) return null;
 
@@ -108,8 +121,11 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</label>
             <Textarea
-              value={todo.notes || ""}
-              onChange={(e) => onUpdate(todo.id, { notes: e.target.value })}
+              value={localNotes}
+              onChange={(e) => {
+                setLocalNotes(e.target.value);
+                debouncedUpdateNotes(todo.id, e.target.value);
+              }}
               placeholder="Add additional notes..."
               className="min-h-[100px] text-sm"
               readOnly={readOnly}
