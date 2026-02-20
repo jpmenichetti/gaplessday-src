@@ -24,9 +24,16 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const [localNotes, setLocalNotes] = useState(todo?.notes || "");
   const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const isSavingNotes = useRef(false);
 
+  // Only reset local notes when switching to a different todo
+  const prevTodoId = useRef(todo?.id);
   useEffect(() => {
-    setLocalNotes(todo?.notes || "");
+    if (todo?.id !== prevTodoId.current) {
+      setLocalNotes(todo?.notes || "");
+      prevTodoId.current = todo?.id;
+      isSavingNotes.current = false;
+    }
   }, [todo?.id, todo?.notes]);
 
   const debouncedUpdateNotes = useCallback((id: string, value: string) => {
