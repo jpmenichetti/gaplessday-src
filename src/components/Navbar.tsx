@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
@@ -9,9 +10,12 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight">
-          Gapless<span className="text-primary">Day</span>
-        </h1>
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="GaplessDay" className="h-8 w-auto" />
+          <h1 className="font-display text-2xl font-bold tracking-tight">
+            Gapless<span className="text-accent">Day</span>
+          </h1>
+        </div>
 
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">

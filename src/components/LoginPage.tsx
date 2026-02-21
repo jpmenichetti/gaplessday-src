@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 export default function LoginPage() {
   const { signInWithGoogle } = useAuth();
@@ -8,17 +9,14 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="mx-4 w-full max-w-md space-y-8 text-center">
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <img src={logo} alt="GaplessDay" className="mx-auto h-20 w-auto" />
           <h1 className="font-display text-5xl font-bold tracking-tight text-foreground">
-            Gapless<span className="text-primary">Day</span>
+            Gapless<span className="text-accent">Day</span>
           </h1>
           <p className="text-lg text-muted-foreground">
             Organize your tasks with colorful categories, multimedia notes, and smart lifecycle rules.
           </p>
-        </div>
-
-        <div className="flex gap-3 justify-center text-3xl">
-          <span>🔴</span><span>🟠</span><span>🟣</span><span>🔵</span>
         </div>
 
         <Button
