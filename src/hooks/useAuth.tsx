@@ -25,16 +25,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let autoLoginAttempted = false;
+
+    const tryAutoLogin = async () => {
+      if (autoLoginAttempted) return;
+      autoLoginAttempted = true;
+      const wasSignedIn = localStorage.getItem("gaplessday_was_signed_in");
+      if (wasSignedIn === "true") {
+        await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.origin,
+        });
+      } else {
+        setLoading(false);
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        localStorage.setItem("gaplessday_was_signed_in", "true");
+      }
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session) {
+        localStorage.setItem("gaplessday_was_signed_in", "true");
+        setLoading(false);
+      } else {
+        tryAutoLogin();
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -47,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    localStorage.removeItem("gaplessday_was_signed_in");
     await supabase.auth.signOut();
   };
 
