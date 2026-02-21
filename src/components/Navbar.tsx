@@ -10,7 +10,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">
-          Todo<span className="text-primary">Flow</span>
+          Gapless<span className="text-primary">Day</span>
         </h1>
 
         <div className="flex items-center gap-3">
