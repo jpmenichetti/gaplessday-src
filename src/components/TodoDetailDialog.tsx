@@ -44,6 +44,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const [localNotes, setLocalNotes] = useState(todo?.notes || "");
   const [panelWidth, setPanelWidth] = useState(loadWidth);
   const [isResizing, setIsResizing] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -158,7 +159,36 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 min-w-0">
+        <div
+          className={cn("flex-1 overflow-y-auto p-6 min-w-0 relative", isDraggingFile && "ring-2 ring-primary ring-inset")}
+          onDragOver={(e) => {
+            if (readOnly) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDraggingFile(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDraggingFile(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDraggingFile(false);
+            if (readOnly || !todo) return;
+            const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+            files.forEach((file) => onUploadImage(todo.id, file));
+          }}
+        >
+          {isDraggingFile && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 rounded pointer-events-none">
+              <div className="flex flex-col items-center gap-2 text-primary">
+                <Upload className="h-8 w-8" />
+                <span className="text-sm font-medium">Drop image to upload</span>
+              </div>
+            </div>
+          )}
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex flex-col gap-1.5">
