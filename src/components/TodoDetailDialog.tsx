@@ -297,7 +297,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                       {!readOnly && (
                         <button
                           onClick={(e) => { e.stopPropagation(); onDeleteImage(img.id, img.storage_path); }}
-                          className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
