@@ -9,7 +9,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 const CATEGORY_INFO: Record<TodoCategory, string> = {
   today: "Tasks here are for today. A task becomes overdue if it's still incomplete after the day it was created.",
   this_week: "Tasks here are for this week. A task becomes overdue if it's still incomplete after the end of the week it was created in (Sunday 23:59).",
-  next_week: "Tasks here are for next week. These tasks don't have an automatic overdue rule.",
+  next_week: "Tasks here are for next week. These tasks don't have an automatic overdue rule. At the end of the week, remaining tasks will be moved to the \"This Week\" group.",
   others: "Tasks here have no specific deadline. They never become overdue automatically.",
 };
 
