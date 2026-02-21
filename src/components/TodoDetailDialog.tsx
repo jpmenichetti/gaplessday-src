@@ -9,6 +9,7 @@ import { Todo, TodoCategory, CATEGORY_CONFIG, getImageUrl } from "@/hooks/useTod
 import { cn } from "@/lib/utils";
 import { tagColor } from "@/lib/tagColors";
 import { Tables } from "@/integrations/supabase/types";
+import { toast } from "sonner";
 
 function useSignedUrl(path: string) {
   const [url, setUrl] = useState<string>("");
@@ -147,9 +148,11 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
     try {
       const parsed = new URL(url);
       if (!["http:", "https:"].includes(parsed.protocol)) {
+        toast.error("Only HTTP and HTTPS URLs are allowed");
         return;
       }
     } catch {
+      toast.error("Invalid URL format");
       return;
     }
     onUpdate(todo.id, { urls: [...(todo.urls || []), url] });
