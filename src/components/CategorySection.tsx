@@ -2,6 +2,16 @@ import { Todo, TodoCategory, CATEGORY_CONFIG } from "@/hooks/useTodos";
 import AddTodo from "./AddTodo";
 import TodoCard from "./TodoCard";
 import { cn } from "@/lib/utils";
+import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
+const CATEGORY_INFO: Record<TodoCategory, string> = {
+  today: "Tasks here are for today. A task becomes overdue if it's still incomplete after the day it was created.",
+  this_week: "Tasks here are for this week. A task becomes overdue if it's still incomplete after the end of the week it was created in (Sunday 23:59).",
+  next_week: "Tasks here are for next week. These tasks don't have an automatic overdue rule.",
+  others: "Tasks here have no specific deadline. They never become overdue automatically.",
+};
 
 type Props = {
   category: TodoCategory;
@@ -27,6 +37,17 @@ export default function CategorySection({ category, todos, onAdd, onToggle, onRe
         <span className="text-xs text-muted-foreground bg-background rounded-full px-2 py-0.5">
           {categoryTodos.length}
         </span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+              <Info className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 text-sm" side="top">
+            <p className="font-medium mb-1">{config.label} rules</p>
+            <p className="text-muted-foreground text-xs">{CATEGORY_INFO[category]}</p>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <AddTodo category={category} onAdd={onAdd} isPending={isAdding} />
