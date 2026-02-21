@@ -21,7 +21,7 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
   const overdue = isOverdue(todo);
   const config = CATEGORY_CONFIG[todo.category as TodoCategory];
   const hasAttachments = todo.notes || (todo.urls && todo.urls.length > 0) || (todo.images && todo.images.length > 0);
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
     id: todo.id,
     disabled: readOnly,
   });
@@ -32,7 +32,6 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
 
   return (
     <div
-      ref={setNodeRef}
       style={style}
       className={cn(
         "group flex items-start gap-3 rounded-lg border p-3 transition-all hover:shadow-sm cursor-pointer bg-background",
@@ -44,6 +43,7 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
     >
       {!readOnly && (
         <div
+          ref={setDragRef}
           className="pt-1 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground touch-none"
           onClick={(e) => e.stopPropagation()}
           {...listeners}
