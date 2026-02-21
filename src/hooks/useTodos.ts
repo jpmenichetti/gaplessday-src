@@ -106,16 +106,38 @@ export function useTodos() {
 
   const uploadImage = useMutation({
     mutationFn: async ({ todoId, file }: { todoId: string; file: File }) => {
-      const path = `${user!.id}/${todoId}/${Date.now()}-${file.name}`;
+      // Server-side validation: size limit (10MB)
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (file.size > MAX_SIZE) throw new Error("File too large. Maximum size is 10MB.");
+
+      // Validate magic bytes to confirm actual image type
+      const header = await file.slice(0, 12).arrayBuffer();
+      const bytes = new Uint8Array(header);
+      const isValidImage =
+        // JPEG: FF D8 FF
+        (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) ||
+        // PNG: 89 50 4E 47
+        (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) ||
+        // GIF: 47 49 46 38
+        (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) ||
+        // WebP: 52 49 46 46 ... 57 45 42 50
+        (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+         bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50);
+
+      if (!isValidImage) throw new Error("Invalid image file. Only JPEG, PNG, GIF, and WebP are allowed.");
+
+      // Sanitize filename: remove path traversal, keep only safe chars
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/\.{2,}/g, ".");
+      const path = `${user!.id}/${todoId}/${Date.now()}-${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from("todo-images")
-        .upload(path, file);
+        .upload(path, file, { contentType: file.type });
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase.from("todo_images").insert({
         todo_id: todoId,
         storage_path: path,
-        file_name: file.name,
+        file_name: safeName,
       });
       if (dbError) throw dbError;
     },
