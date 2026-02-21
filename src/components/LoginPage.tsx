@@ -10,7 +10,7 @@ export default function LoginPage() {
       <div className="mx-4 w-full max-w-md space-y-8 text-center">
         <div className="space-y-3">
           <h1 className="font-display text-5xl font-bold tracking-tight text-foreground">
-            Todo<span className="text-primary">Flow</span>
+            Gapless<span className="text-primary">Day</span>
           </h1>
           <p className="text-lg text-muted-foreground">
             Organize your tasks with colorful categories, multimedia notes, and smart lifecycle rules.
