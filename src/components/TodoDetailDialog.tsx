@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Link2, ExternalLink, Trash2, GripVertical } from "lucide-react";
 import { Todo, TodoCategory, CATEGORY_CONFIG, getImageUrl } from "@/hooks/useTodos";
 import { cn } from "@/lib/utils";
+import { tagColor } from "@/lib/tagColors";
 
 const STORAGE_KEY = "todo-panel-width";
 const DEFAULT_WIDTH = 480;
@@ -213,14 +214,14 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</label>
               <div className="flex flex-wrap gap-1.5">
                 {todo.tags?.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                  <span key={tag} className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold", tagColor(tag))}>
                     {tag}
                     {!readOnly && (
-                      <button onClick={() => removeTag(tag)} className="ml-0.5 hover:text-destructive">
+                      <button onClick={() => removeTag(tag)} className="ml-0.5 hover:opacity-60">
                         <X className="h-3 w-3" />
                       </button>
                     )}
-                  </Badge>
+                  </span>
                 ))}
               </div>
             {!readOnly && (
