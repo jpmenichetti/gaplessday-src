@@ -144,9 +144,12 @@ export function useTodos() {
   };
 }
 
-export function getImageUrl(path: string) {
-  const { data } = supabase.storage.from("todo-images").getPublicUrl(path);
-  return data.publicUrl;
+export async function getImageUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from("todo-images")
+    .createSignedUrl(path, 3600); // 1 hour expiry
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 export function isOverdue(todo: Todo): boolean {
