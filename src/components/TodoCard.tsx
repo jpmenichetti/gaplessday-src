@@ -91,7 +91,7 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
         </div>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
         {!readOnly && (
           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onRemove(todo.id)}>
             <Trash2 className="h-3.5 w-3.5" />
