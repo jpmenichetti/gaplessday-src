@@ -30,7 +30,7 @@ const Index = () => {
   const filteredTodos = useMemo(() => {
     let result = todos;
     if (showOverdue) result = result.filter((t) => isOverdue(t));
-    if (selectedTags.length > 0) result = result.filter((t) => (t.tags || []).some((tag) => selectedTags.includes(tag)));
+    if (selectedTags.length > 0) result = result.filter((t) => selectedTags.every((tag) => (t.tags || []).includes(tag)));
     return result;
   }, [todos, showOverdue, selectedTags]);
 
