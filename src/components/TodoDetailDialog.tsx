@@ -144,6 +144,14 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const addUrl = () => {
     const url = urlInput.trim();
     if (!url) return;
+    try {
+      const parsed = new URL(url);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        return;
+      }
+    } catch {
+      return;
+    }
     onUpdate(todo.id, { urls: [...(todo.urls || []), url] });
     setUrlInput("");
   };
