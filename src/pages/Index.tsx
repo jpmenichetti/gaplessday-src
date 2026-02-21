@@ -7,7 +7,7 @@ import CategorySection from "@/components/CategorySection";
 import ArchiveSection from "@/components/ArchiveSection";
 import TodoDetailDialog from "@/components/TodoDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import TodoCard from "@/components/TodoCard";
 
 const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"];
@@ -20,7 +20,8 @@ const Index = () => {
   const [activeDragTodo, setActiveDragTodo] = useState<Todo | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
