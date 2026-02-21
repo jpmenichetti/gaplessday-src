@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Image, Link2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { playCompletionSound } from "@/lib/sounds";
 
 type Props = {
   todo: Todo;
@@ -33,7 +34,10 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
         <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
           <Checkbox
             checked={todo.completed}
-            onCheckedChange={(checked) => onToggle(todo.id, !!checked)}
+            onCheckedChange={(checked) => {
+              if (checked) playCompletionSound();
+              onToggle(todo.id, !!checked);
+            }}
           />
         </div>
       )}
