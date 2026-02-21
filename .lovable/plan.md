@@ -1,30 +1,23 @@
 
-
-## Convert Todo Detail to a Resizable Side Panel with Persistent Width
+## Add Completion Sound Effect
 
 ### Overview
-Replace the current Dialog with a custom right-side panel that can be resized by dragging its left edge. The panel width is saved to `localStorage` so it persists between sessions.
+Play a short, satisfying sound when a task is checked off to give the user positive feedback. The sound will be synthesized using the Web Audio API -- no external files or API calls needed.
 
 ### Changes
 
-**`src/components/TodoDetailDialog.tsx`**
-- Remove Dialog imports; replace with a custom slide-in panel using a fixed-position `div` on the right side
-- Add a draggable resize handle on the left edge of the panel
-- Track panel width in state, initialized from `localStorage` (default ~480px, min 320px, max 50% of viewport)
-- On resize end (mouseup/touchend), save the new width to `localStorage` under a key like `todo-panel-width`
-- Add a backdrop overlay that closes the panel on click
-- Add a close button (X) in the header
-- Add smooth slide-in/out animation via CSS transitions
-- All internal content (tags, notes, images, URLs) remains unchanged
+**New file: `src/lib/sounds.ts`**
+- Create a `playCompletionSound()` function using the Web Audio API
+- Synthesize a short two-tone "ding" (ascending notes, ~200ms total) that feels rewarding
+- Use an `OscillatorNode` with a sine wave and a `GainNode` for a smooth fade-out
+- Gracefully handle cases where `AudioContext` is unavailable (e.g., older browsers)
 
-**`src/pages/Index.tsx`**
-- No changes needed -- the component already receives `open`/`onClose` props that work the same way
+**`src/components/TodoCard.tsx`**
+- Import `playCompletionSound` from the new utility
+- In the `onCheckedChange` handler, call `playCompletionSound()` only when the checkbox transitions to checked (not when unchecking)
 
 ### Technical Details
-
-- **Resize mechanism**: `onMouseDown` on a thin left-edge handle starts tracking mouse movement via `mousemove`/`mouseup` on `document`. Width = `window.innerWidth - clientX`, clamped to min/max bounds.
-- **Persistence**: `localStorage.getItem("todo-panel-width")` on mount, `localStorage.setItem(...)` on resize end.
-- **Animation**: CSS transition on `transform: translateX(...)` toggled by the `open` prop.
-- **Accessibility**: The backdrop and close button ensure the panel can be dismissed. Focus management via `autoFocus` on the panel container.
-- **Mobile**: On small screens (< 640px), the panel takes full width and the resize handle is hidden.
-
+- The Web Audio API is used to avoid loading external audio files and to keep the app self-contained
+- The sound is a quick ascending two-note chime (e.g., C5 then E5), each ~100ms, with gain envelope for a clean fade
+- No user gesture issues since the sound plays in response to a click (checkbox interaction)
+- The function is a no-op if the browser doesn't support `AudioContext`
