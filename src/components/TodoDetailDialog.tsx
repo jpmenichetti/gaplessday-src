@@ -8,6 +8,35 @@ import { X, Plus, Upload, Link2, ExternalLink, Trash2, GripVertical } from "luci
 import { Todo, TodoCategory, CATEGORY_CONFIG, getImageUrl } from "@/hooks/useTodos";
 import { cn } from "@/lib/utils";
 import { tagColor } from "@/lib/tagColors";
+import { Tables } from "@/integrations/supabase/types";
+
+function useSignedUrl(path: string) {
+  const [url, setUrl] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    getImageUrl(path).then((u) => { if (!cancelled) setUrl(u); });
+    return () => { cancelled = true; };
+  }, [path]);
+  return url;
+}
+
+function SignedImage({ img, readOnly, onDelete, onClick }: { img: Tables<"todo_images">; readOnly?: boolean; onDelete: (id: string, path: string) => void; onClick: (src: string, alt: string) => void }) {
+  const url = useSignedUrl(img.storage_path);
+  if (!url) return <div className="rounded-lg border aspect-square bg-muted animate-pulse" />;
+  return (
+    <div className="relative group rounded-lg overflow-hidden border aspect-square cursor-pointer" onClick={() => onClick(url, img.file_name)}>
+      <img src={url} alt={img.file_name} className="h-full w-full object-cover" />
+      {!readOnly && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(img.id, img.storage_path); }}
+          className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 const STORAGE_KEY = "todo-panel-width";
 const DEFAULT_WIDTH = 480;
@@ -288,21 +317,13 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
               {todo.images && todo.images.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
                   {todo.images.map((img) => (
-                    <div key={img.id} className="relative group rounded-lg overflow-hidden border aspect-square cursor-pointer" onClick={() => setPreviewImage({ src: getImageUrl(img.storage_path), alt: img.file_name })}>
-                      <img
-                        src={getImageUrl(img.storage_path)}
-                        alt={img.file_name}
-                        className="h-full w-full object-cover"
-                      />
-                      {!readOnly && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onDeleteImage(img.id, img.storage_path); }}
-                          className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
+                    <SignedImage
+                      key={img.id}
+                      img={img}
+                      readOnly={readOnly}
+                      onDelete={onDeleteImage}
+                      onClick={(src, alt) => setPreviewImage({ src, alt })}
+                    />
                   ))}
                 </div>
               )}
