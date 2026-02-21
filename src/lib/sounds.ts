@@ -19,9 +19,10 @@ export function playCompletionSound() {
       osc.stop(start + duration);
     };
 
-    // C5 → E5 ascending chime
-    playTone(523.25, now, 0.12);
-    playTone(659.25, now + 0.08, 0.15);
+    // E6 → A6 → C7 bright cheerful chime
+    playTone(1318.5, now, 0.1);
+    playTone(1760.0, now + 0.07, 0.1);
+    playTone(2093.0, now + 0.14, 0.18);
   } catch {
     // silently ignore
   }
