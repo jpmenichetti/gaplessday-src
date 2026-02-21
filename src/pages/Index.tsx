@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useTodos, Todo, TodoCategory } from "@/hooks/useTodos";
+import { useTodos, Todo, TodoCategory, isOverdue } from "@/hooks/useTodos";
+import { useFilters } from "@/hooks/useFilters";
 import LoginPage from "@/components/LoginPage";
 import Navbar from "@/components/Navbar";
+import FilterBar from "@/components/FilterBar";
 import CategorySection from "@/components/CategorySection";
 import ArchiveSection from "@/components/ArchiveSection";
 import TodoDetailDialog from "@/components/TodoDetailDialog";
@@ -15,9 +17,22 @@ const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"]
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, uploadImage, deleteImage } = useTodos();
+  const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters } = useFilters();
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [dialogReadOnly, setDialogReadOnly] = useState(false);
   const [activeDragTodo, setActiveDragTodo] = useState<Todo | null>(null);
+
+  const allTags = useMemo(
+    () => Array.from(new Set([...todos, ...archived].flatMap((t) => t.tags || []))),
+    [todos, archived]
+  );
+
+  const filteredTodos = useMemo(() => {
+    let result = todos;
+    if (showOverdue) result = result.filter((t) => isOverdue(t));
+    if (selectedTags.length > 0) result = result.filter((t) => (t.tags || []).some((tag) => selectedTags.includes(tag)));
+    return result;
+  }, [todos, showOverdue, selectedTags]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -69,6 +84,15 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container max-w-4xl py-6 space-y-6">
+        <FilterBar
+          showOverdue={showOverdue}
+          selectedTags={selectedTags}
+          allTags={allTags}
+          hasActiveFilters={hasActiveFilters}
+          onToggleOverdue={toggleOverdue}
+          onToggleTag={toggleTag}
+          onClear={clearFilters}
+        />
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
@@ -83,7 +107,7 @@ const Index = () => {
                   <CategorySection
                     key={cat}
                     category={cat}
-                    todos={todos}
+                    todos={filteredTodos}
                     onAdd={(text, category) => addTodo.mutate({ text, category })}
                     onToggle={(id, completed) => toggleComplete.mutate({ id, completed })}
                     onRemove={(id) => removeTodo.mutate(id)}
@@ -119,7 +143,7 @@ const Index = () => {
         onUploadImage={(todoId, file) => uploadImage.mutate({ todoId, file })}
         onDeleteImage={(id, storagePath) => deleteImage.mutate({ id, storagePath })}
         readOnly={dialogReadOnly}
-        allTags={Array.from(new Set([...todos, ...archived].flatMap((t) => t.tags || [])))}
+        allTags={allTags}
       />
     </div>
   );
