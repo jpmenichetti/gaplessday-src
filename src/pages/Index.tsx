@@ -7,6 +7,8 @@ import CategorySection from "@/components/CategorySection";
 import ArchiveSection from "@/components/ArchiveSection";
 import TodoDetailDialog from "@/components/TodoDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import TodoCard from "@/components/TodoCard";
 
 const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"];
 
@@ -15,6 +17,32 @@ const Index = () => {
   const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, uploadImage, deleteImage } = useTodos();
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [dialogReadOnly, setDialogReadOnly] = useState(false);
+  const [activeDragTodo, setActiveDragTodo] = useState<Todo | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const todo = todos.find((t) => t.id === event.active.id);
+    setActiveDragTodo(todo || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragTodo(null);
+    const { active, over } = event;
+    if (!over) return;
+    const todoId = active.id as string;
+    const newCategory = over.id as TodoCategory;
+    const todo = todos.find((t) => t.id === todoId);
+    if (!todo || todo.category === newCategory) return;
+
+    const updates: Record<string, unknown> = { category: newCategory };
+    if (newCategory !== "others") {
+      updates.created_at = new Date().toISOString();
+    }
+    updateTodo.mutate({ id: todoId, ...updates } as any);
+  };
 
   if (authLoading) {
     return (
@@ -48,20 +76,34 @@ const Index = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {CATEGORIES.map((cat) => (
-                <CategorySection
-                  key={cat}
-                  category={cat}
-                  todos={todos}
-                  onAdd={(text, category) => addTodo.mutate({ text, category })}
-                  onToggle={(id, completed) => toggleComplete.mutate({ id, completed })}
-                  onRemove={(id) => removeTodo.mutate(id)}
-                  onOpen={(todo) => openTodo(todo)}
-                  isAdding={addTodo.isPending}
-                />
-              ))}
-            </div>
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {CATEGORIES.map((cat) => (
+                  <CategorySection
+                    key={cat}
+                    category={cat}
+                    todos={todos}
+                    onAdd={(text, category) => addTodo.mutate({ text, category })}
+                    onToggle={(id, completed) => toggleComplete.mutate({ id, completed })}
+                    onRemove={(id) => removeTodo.mutate(id)}
+                    onOpen={(todo) => openTodo(todo)}
+                    isAdding={addTodo.isPending}
+                  />
+                ))}
+              </div>
+              <DragOverlay>
+                {activeDragTodo ? (
+                  <div className="opacity-80 rotate-2 scale-105">
+                    <TodoCard
+                      todo={activeDragTodo}
+                      onToggle={() => {}}
+                      onRemove={() => {}}
+                      onOpen={() => {}}
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
             <ArchiveSection todos={archived} onOpen={(todo) => openTodo(todo, true)} />
           </>

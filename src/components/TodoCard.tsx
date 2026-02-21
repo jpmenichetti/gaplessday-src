@@ -2,9 +2,10 @@ import { Todo, TodoCategory, CATEGORY_CONFIG, isOverdue } from "@/hooks/useTodos
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, FileText, Image, Link2, ChevronRight } from "lucide-react";
+import { Trash2, FileText, Image, Link2, ChevronRight, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { playCompletionSound } from "@/lib/sounds";
+import { useDraggable } from "@dnd-kit/core";
 
 type Props = {
   todo: Todo;
@@ -20,16 +21,38 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
   const overdue = isOverdue(todo);
   const config = CATEGORY_CONFIG[todo.category as TodoCategory];
   const hasAttachments = todo.notes || (todo.urls && todo.urls.length > 0) || (todo.images && todo.images.length > 0);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: todo.id,
+    disabled: readOnly,
+  });
+
+  const style = transform
+    ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
+    : undefined;
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={cn(
-        "group flex items-start gap-3 rounded-lg border p-3 transition-all hover:shadow-sm cursor-pointer",
+        "group flex items-start gap-3 rounded-lg border p-3 transition-all hover:shadow-sm cursor-pointer bg-background",
         todo.completed && "opacity-60",
         overdue && "border-destructive/50 bg-destructive/5",
+        isDragging && "opacity-50 shadow-lg z-50",
       )}
-      onClick={() => onOpen(todo)}
+      onClick={() => !isDragging && onOpen(todo)}
     >
+      {!readOnly && (
+        <div
+          className="pt-1 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground touch-none"
+          onClick={(e) => e.stopPropagation()}
+          {...listeners}
+          {...attributes}
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+      )}
+
       {!readOnly && (
         <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
           <Checkbox
