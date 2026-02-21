@@ -1,12 +1,31 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Upload, Link2, ExternalLink, Trash2 } from "lucide-react";
+import { X, Plus, Upload, Link2, ExternalLink, Trash2, GripVertical } from "lucide-react";
 import { Todo, TodoCategory, CATEGORY_CONFIG, getImageUrl } from "@/hooks/useTodos";
 import { cn } from "@/lib/utils";
+
+const STORAGE_KEY = "todo-panel-width";
+const DEFAULT_WIDTH = 480;
+const MIN_WIDTH = 320;
+
+function getMaxWidth() {
+  return Math.floor(window.innerWidth * 0.5);
+}
+
+function clampWidth(w: number) {
+  return Math.max(MIN_WIDTH, Math.min(w, getMaxWidth()));
+}
+
+function loadWidth(): number {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return clampWidth(Number(stored));
+  } catch {}
+  return DEFAULT_WIDTH;
+}
 
 type Props = {
   todo: Todo | null;
@@ -22,11 +41,12 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [localNotes, setLocalNotes] = useState(todo?.notes || "");
+  const [panelWidth, setPanelWidth] = useState(loadWidth);
+  const [isResizing, setIsResizing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const isSavingNotes = useRef(false);
 
-  // Only reset local notes when switching to a different todo
   const prevTodoId = useRef(todo?.id);
   useEffect(() => {
     if (todo?.id !== prevTodoId.current) {
@@ -42,6 +62,35 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
       onUpdate(id, { notes: value });
     }, 500);
   }, [onUpdate]);
+
+  // Resize logic
+  const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      const clientX = "touches" in ev ? ev.touches[0].clientX : ev.clientX;
+      setPanelWidth(clampWidth(window.innerWidth - clientX));
+    };
+
+    const onEnd = () => {
+      setIsResizing(false);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onEnd);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
+      // Save on end
+      setPanelWidth((w) => {
+        try { localStorage.setItem(STORAGE_KEY, String(w)); } catch {}
+        return w;
+      });
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onEnd);
+    document.addEventListener("touchmove", onMove);
+    document.addEventListener("touchend", onEnd);
+  }, []);
 
   if (!todo) return null;
 
@@ -78,137 +127,171 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-display">
-            <span>{config.emoji}</span>
-            <span className={cn("text-sm font-medium px-2 py-0.5 rounded-full", config.bgClass, config.colorClass)}>
-              {config.label}
-            </span>
-          </DialogTitle>
-          <DialogDescription className="text-base font-medium text-foreground pt-1">
-            {todo.text}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      {/* Backdrop */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300",
+          open ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={onClose}
+      />
 
-        <div className="space-y-5 pt-2">
-          {/* Tags */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</label>
-            <div className="flex flex-wrap gap-1.5">
-              {todo.tags?.map((tag) => (
-                <Badge key={tag} variant="secondary" className="gap-1 text-xs">
-                  {tag}
-                  {!readOnly && (
-                    <button onClick={() => removeTag(tag)} className="ml-0.5 hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </Badge>
-              ))}
-            </div>
-            {!readOnly && (
-              <div className="flex gap-2">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                  placeholder="Add tag..."
-                  className="h-8 text-sm"
-                />
-                <Button size="sm" variant="outline" onClick={addTag} disabled={!tagInput.trim()}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
+      {/* Panel */}
+      <div
+        className={cn(
+          "fixed top-0 right-0 z-50 h-full bg-background border-l shadow-xl flex transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "translate-x-full",
+          isResizing && "transition-none select-none"
+        )}
+        style={{ width: window.innerWidth < 640 ? "100%" : panelWidth }}
+      >
+        {/* Resize handle - hidden on mobile */}
+        <div
+          className="hidden sm:flex items-center justify-center w-2 cursor-col-resize hover:bg-accent/50 active:bg-accent shrink-0 group"
+          onMouseDown={handleResizeStart}
+          onTouchStart={handleResizeStart}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 min-w-0">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2 font-display">
+                <span>{config.emoji}</span>
+                <span className={cn("text-sm font-medium px-2 py-0.5 rounded-full", config.bgClass, config.colorClass)}>
+                  {config.label}
+                </span>
               </div>
-            )}
+              <p className="text-base font-medium text-foreground">{todo.text}</p>
+            </div>
+            <button onClick={onClose} className="rounded-sm p-1 opacity-70 hover:opacity-100 transition-opacity">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
           </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</label>
-            <Textarea
-              value={localNotes}
-              onChange={(e) => {
-                setLocalNotes(e.target.value);
-                debouncedUpdateNotes(todo.id, e.target.value);
-              }}
-              placeholder="Add additional notes..."
-              className="min-h-[100px] text-sm"
-              readOnly={readOnly}
-            />
-          </div>
-
-          {/* Images */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Images</label>
-            {todo.images && todo.images.length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
-                {todo.images.map((img) => (
-                  <div key={img.id} className="relative group rounded-lg overflow-hidden border aspect-square">
-                    <img
-                      src={getImageUrl(img.storage_path)}
-                      alt={img.file_name}
-                      className="h-full w-full object-cover"
-                    />
+          <div className="space-y-5">
+            {/* Tags */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</label>
+              <div className="flex flex-wrap gap-1.5">
+                {todo.tags?.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                    {tag}
                     {!readOnly && (
-                      <button
-                        onClick={() => onDeleteImage(img.id, img.storage_path)}
-                        className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="h-3 w-3" />
+                      <button onClick={() => removeTag(tag)} className="ml-0.5 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </Badge>
+                ))}
+              </div>
+              {!readOnly && (
+                <div className="flex gap-2">
+                  <Input
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    placeholder="Add tag..."
+                    className="h-8 text-sm"
+                  />
+                  <Button size="sm" variant="outline" onClick={addTag} disabled={!tagInput.trim()}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</label>
+              <Textarea
+                value={localNotes}
+                onChange={(e) => {
+                  setLocalNotes(e.target.value);
+                  debouncedUpdateNotes(todo.id, e.target.value);
+                }}
+                placeholder="Add additional notes..."
+                className="min-h-[100px] text-sm"
+                readOnly={readOnly}
+              />
+            </div>
+
+            {/* Images */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Images</label>
+              {todo.images && todo.images.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {todo.images.map((img) => (
+                    <div key={img.id} className="relative group rounded-lg overflow-hidden border aspect-square">
+                      <img
+                        src={getImageUrl(img.storage_path)}
+                        alt={img.file_name}
+                        className="h-full w-full object-cover"
+                      />
+                      {!readOnly && (
+                        <button
+                          onClick={() => onDeleteImage(img.id, img.storage_path)}
+                          className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!readOnly && (
+                <>
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()}>
+                    <Upload className="h-3.5 w-3.5" /> Upload Image
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* URLs */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Links</label>
+              <div className="space-y-1.5">
+                {todo.urls?.map((url) => (
+                  <div key={url} className="flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-sm">
+                    <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline flex-1">
+                      {url}
+                    </a>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
+                    {!readOnly && (
+                      <button onClick={() => removeUrl(url)} className="hover:text-destructive">
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
                 ))}
               </div>
-            )}
-            {!readOnly && (
-              <>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()}>
-                  <Upload className="h-3.5 w-3.5" /> Upload Image
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* URLs */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Links</label>
-            <div className="space-y-1.5">
-              {todo.urls?.map((url) => (
-                <div key={url} className="flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-sm">
-                  <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline flex-1">
-                    {url}
-                  </a>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
-                  {!readOnly && (
-                    <button onClick={() => removeUrl(url)} className="hover:text-destructive">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+              {!readOnly && (
+                <div className="flex gap-2">
+                  <Input
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addUrl())}
+                    placeholder="https://..."
+                    className="h-8 text-sm"
+                  />
+                  <Button size="sm" variant="outline" onClick={addUrl} disabled={!urlInput.trim()}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-              ))}
+              )}
             </div>
-            {!readOnly && (
-              <div className="flex gap-2">
-                <Input
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addUrl())}
-                  placeholder="https://..."
-                  className="h-8 text-sm"
-                />
-                <Button size="sm" variant="outline" onClick={addUrl} disabled={!urlInput.trim()}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   );
 }
