@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { useDroppable } from "@dnd-kit/core";
 
 const CATEGORY_INFO: Record<TodoCategory, string> = {
   today: "Tasks here are for today. A task becomes overdue if it's still incomplete after the day it was created.",
@@ -26,9 +27,18 @@ type Props = {
 export default function CategorySection({ category, todos, onAdd, onToggle, onRemove, onOpen, isAdding }: Props) {
   const config = CATEGORY_CONFIG[category];
   const categoryTodos = todos.filter((t) => t.category === category);
+  const { setNodeRef, isOver } = useDroppable({ id: category });
 
   return (
-    <div className={cn("rounded-xl border-2 p-4 space-y-3", config.bgClass)} style={{ borderColor: `hsl(var(--category-${category === "this_week" ? "week" : category === "next_week" ? "next" : category}) / 0.3)` }}>
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-xl border-2 p-4 space-y-3 transition-colors",
+        config.bgClass,
+        isOver && "ring-2 ring-primary/40 border-primary/40",
+      )}
+      style={{ borderColor: isOver ? undefined : `hsl(var(--category-${category === "this_week" ? "week" : category === "next_week" ? "next" : category}) / 0.3)` }}
+    >
       <div className="flex items-center gap-2">
         <span className="text-xl">{config.emoji}</span>
         <h2 className={cn("font-display text-lg font-semibold", config.colorClass)}>
