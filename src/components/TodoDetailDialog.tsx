@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const [localNotes, setLocalNotes] = useState(todo?.notes || "");
   const [panelWidth, setPanelWidth] = useState(loadWidth);
   const [isResizing, setIsResizing] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const isSavingNotes = useRef(false);
@@ -227,7 +229,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
               {todo.images && todo.images.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
                   {todo.images.map((img) => (
-                    <div key={img.id} className="relative group rounded-lg overflow-hidden border aspect-square">
+                    <div key={img.id} className="relative group rounded-lg overflow-hidden border aspect-square cursor-pointer" onClick={() => setPreviewImage({ src: getImageUrl(img.storage_path), alt: img.file_name })}>
                       <img
                         src={getImageUrl(img.storage_path)}
                         alt={img.file_name}
@@ -235,7 +237,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                       />
                       {!readOnly && (
                         <button
-                          onClick={() => onDeleteImage(img.id, img.storage_path)}
+                          onClick={(e) => { e.stopPropagation(); onDeleteImage(img.id, img.storage_path); }}
                           className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -292,6 +294,15 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
           </div>
         </div>
       </div>
+
+      {/* Image preview dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-3xl p-2 bg-background/95">
+          {previewImage && (
+            <img src={previewImage.src} alt={previewImage.alt} className="w-full h-auto max-h-[80vh] object-contain rounded" />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
