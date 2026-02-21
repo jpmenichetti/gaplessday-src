@@ -76,6 +76,7 @@ const Index = () => {
         onUploadImage={(todoId, file) => uploadImage.mutate({ todoId, file })}
         onDeleteImage={(id, storagePath) => deleteImage.mutate({ id, storagePath })}
         readOnly={dialogReadOnly}
+        allTags={Array.from(new Set([...todos, ...archived].flatMap((t) => t.tags || [])))}
       />
     </div>
   );

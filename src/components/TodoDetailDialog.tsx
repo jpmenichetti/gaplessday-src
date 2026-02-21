@@ -36,9 +36,10 @@ type Props = {
   onUploadImage: (todoId: string, file: File) => void;
   onDeleteImage: (id: string, storagePath: string) => void;
   readOnly?: boolean;
+  allTags?: string[];
 };
 
-export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, readOnly }: Props) {
+export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, readOnly, allTags = [] }: Props) {
   const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [localNotes, setLocalNotes] = useState(todo?.notes || "");
@@ -222,12 +223,15 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                   </Badge>
                 ))}
               </div>
-              {!readOnly && (
+            {!readOnly && (
+              <div className="relative">
                 <div className="flex gap-2">
                   <Input
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); addTag(); }
+                    }}
                     placeholder="Add tag..."
                     className="h-8 text-sm"
                   />
@@ -235,7 +239,31 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              )}
+                {tagInput.trim() && (() => {
+                  const suggestions = allTags.filter(
+                    (t) => t.toLowerCase().includes(tagInput.trim().toLowerCase()) && !todo.tags?.includes(t)
+                  );
+                  if (suggestions.length === 0) return null;
+                  return (
+                    <div className="absolute z-10 top-full left-0 mt-1 w-full max-h-32 overflow-y-auto rounded-md border bg-popover shadow-md">
+                      {suggestions.map((tag) => (
+                        <button
+                          key={tag}
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent truncate"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            onUpdate(todo.id, { tags: [...(todo.tags || []), tag] });
+                            setTagInput("");
+                          }}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             </div>
 
             {/* Notes */}
