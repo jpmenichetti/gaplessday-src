@@ -1,9 +1,26 @@
 import { Todo, CATEGORY_CONFIG, TodoCategory } from "@/hooks/useTodos";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Archive, ChevronDown, RotateCcw } from "lucide-react";
+import { Archive, ChevronDown, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nContext";
 
@@ -18,56 +35,162 @@ type Props = {
   todos: Todo[];
   onOpen: (todo: Todo) => void;
   onRestore?: (id: string) => void;
+  onPermanentDelete?: (ids: string[]) => void;
 };
 
-export default function ArchiveSection({ todos, onOpen, onRestore }: Props) {
+export default function ArchiveSection({ todos, onOpen, onRestore, onPermanentDelete }: Props) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "single"; id: string } | { type: "period"; label: string; ids: string[] } | null>(null);
 
   if (todos.length === 0) return null;
 
+  const handleDeleteSingle = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDeleteTarget({ type: "single", id });
+  };
+
+  const handleDeleteByPeriod = (period: string) => {
+    const now = new Date();
+    let cutoff: Date;
+    let label: string;
+
+    switch (period) {
+      case "1week":
+        cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        label = t("archive.olderThan1Week");
+        break;
+      case "1month":
+        cutoff = new Date(now);
+        cutoff.setMonth(cutoff.getMonth() - 1);
+        label = t("archive.olderThan1Month");
+        break;
+      case "3months":
+        cutoff = new Date(now);
+        cutoff.setMonth(cutoff.getMonth() - 3);
+        label = t("archive.olderThan3Months");
+        break;
+      case "all":
+        label = t("archive.deleteAll");
+        setDeleteTarget({ type: "period", label, ids: todos.map((t) => t.id) });
+        return;
+      default:
+        return;
+    }
+
+    const ids = todos
+      .filter((todo) => {
+        const archivedDate = todo.removed_at ? new Date(todo.removed_at) : new Date(todo.created_at);
+        return archivedDate < cutoff;
+      })
+      .map((todo) => todo.id);
+
+    if (ids.length === 0) return;
+    setDeleteTarget({ type: "period", label, ids });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget || !onPermanentDelete) return;
+    if (deleteTarget.type === "single") {
+      onPermanentDelete([deleteTarget.id]);
+    } else {
+      onPermanentDelete(deleteTarget.ids);
+    }
+    setDeleteTarget(null);
+  };
+
+  const deleteCount = deleteTarget
+    ? deleteTarget.type === "single" ? 1 : deleteTarget.ids.length
+    : 0;
+
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="rounded-xl border bg-muted/50 p-4">
-      <CollapsibleTrigger className="flex w-full items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Archive className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-display text-lg font-semibold text-muted-foreground">{t("archive.title")}</h2>
-          <span className="text-xs text-muted-foreground bg-background rounded-full px-2 py-0.5">{todos.length}</span>
-        </div>
-        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pt-3 space-y-2">
-        {todos.map((todo) => {
-          const config = CATEGORY_CONFIG[todo.category as TodoCategory];
-          return (
-            <div
-              key={todo.id}
-              className="flex items-center gap-3 rounded-lg border bg-background/50 p-3 opacity-70 cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => onOpen(todo)}
-            >
-              <div className="flex-1 min-w-0">
-                <p className={cn("text-sm", todo.completed && "line-through text-muted-foreground")}>{todo.text}</p>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t(CATEGORY_LABEL_KEYS[todo.category as TodoCategory] || "category.others")}</Badge>
-                  <span>{t("archive.created")} {new Date(todo.created_at).toLocaleDateString()}</span>
-                  {todo.removed_at && <span>• {t("archive.archived")} {new Date(todo.removed_at).toLocaleDateString()}</span>}
+    <>
+      <Collapsible open={open} onOpenChange={setOpen} className="rounded-xl border bg-muted/50 p-4">
+        <CollapsibleTrigger className="flex w-full items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Archive className="h-5 w-5 text-muted-foreground" />
+            <h2 className="font-display text-lg font-semibold text-muted-foreground">{t("archive.title")}</h2>
+            <span className="text-xs text-muted-foreground bg-background rounded-full px-2 py-0.5">{todos.length}</span>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-3">
+          {onPermanentDelete && (
+            <div className="flex items-center gap-2">
+              <Select onValueChange={handleDeleteByPeriod}>
+                <SelectTrigger className="h-8 w-auto min-w-[180px] text-xs">
+                  <SelectValue placeholder={t("archive.deletePeriod")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1week">{t("archive.olderThan1Week")}</SelectItem>
+                  <SelectItem value="1month">{t("archive.olderThan1Month")}</SelectItem>
+                  <SelectItem value="3months">{t("archive.olderThan3Months")}</SelectItem>
+                  <SelectItem value="all">{t("archive.deleteAll")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {todos.map((todo) => {
+            return (
+              <div
+                key={todo.id}
+                className="flex items-center gap-3 rounded-lg border bg-background/50 p-3 opacity-70 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => onOpen(todo)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={cn("text-sm", todo.completed && "line-through text-muted-foreground")}>{todo.text}</p>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t(CATEGORY_LABEL_KEYS[todo.category as TodoCategory] || "category.others")}</Badge>
+                    <span>{t("archive.created")} {new Date(todo.created_at).toLocaleDateString()}</span>
+                    {todo.removed_at && <span>• {t("archive.archived")} {new Date(todo.removed_at).toLocaleDateString()}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {onRestore && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); onRestore(todo.id); }}
+                      title={t("archive.restore")}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {onPermanentDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => handleDeleteSingle(e, todo.id)}
+                      title={t("archive.permanentDelete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               </div>
-              {onRestore && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-                  onClick={(e) => { e.stopPropagation(); onRestore(todo.id); }}
-                  title={t("archive.restore")}
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-          );
-        })}
-      </CollapsibleContent>
-    </Collapsible>
+            );
+          })}
+        </CollapsibleContent>
+      </Collapsible>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("archive.confirmDeleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("archive.confirmDeleteDesc").replace("{count}", String(deleteCount))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("backup.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("archive.confirmDeleteBtn")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

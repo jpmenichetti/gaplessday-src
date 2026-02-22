@@ -249,6 +249,20 @@ export function useTodos() {
     },
   });
 
+  const permanentlyDeleteTodos = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (let i = 0; i < ids.length; i += 500) {
+        const batch = ids.slice(i, i + 500);
+        const { error } = await supabase.from("todos").delete().in("id", batch);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+    },
+  });
+
   const deleteAllTodos = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("todos").delete().eq("user_id", user!.id);
@@ -344,6 +358,7 @@ export function useTodos() {
     restoreTodo,
     uploadImage,
     deleteImage,
+    permanentlyDeleteTodos,
     deleteAllTodos,
     bulkInsertTodos,
   };
