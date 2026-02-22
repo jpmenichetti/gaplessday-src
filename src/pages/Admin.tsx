@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { ArrowLeft, RefreshCw, Users, ListTodo, CalendarDays, CalendarRange, CalendarClock, LayoutList } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ArrowLeft, RefreshCw, Users, ListTodo, CalendarDays, CalendarRange, CalendarClock, LayoutList, CalendarIcon } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type StatsSummary = {
   total_users: number;
@@ -31,6 +35,8 @@ export default function Admin() {
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [daily, setDaily] = useState<DailyStat[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 30));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
   const { toast } = useToast();
 
   const fetchStats = async () => {
@@ -60,6 +66,17 @@ export default function Admin() {
     }
   };
 
+  const chartDaily = useMemo(() => {
+    const from = format(dateFrom, "yyyy-MM-dd");
+    const to = format(dateTo, "yyyy-MM-dd");
+    return daily
+      .filter((d) => d.stat_date >= from && d.stat_date <= to)
+      .map((d) => ({
+        ...d,
+        date: new Date(d.stat_date).toLocaleDateString("en", { month: "short", day: "numeric" }),
+      }));
+  }, [daily, dateFrom, dateTo]);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -69,11 +86,6 @@ export default function Admin() {
   }
 
   if (!isAdmin) return null;
-
-  const chartDaily = daily.map((d) => ({
-    ...d,
-    date: new Date(d.stat_date).toLocaleDateString("en", { month: "short", day: "numeric" }),
-  }));
 
   const usersChartConfig = {
     unique_users: { label: "Unique Users", color: "hsl(var(--primary))" },
@@ -132,6 +144,41 @@ export default function Admin() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Date range:</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="h-4 w-4 mr-1" />
+                {format(dateFrom, "MMM d, yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
+          <span className="text-sm text-muted-foreground">to</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="h-4 w-4 mr-1" />
+                {format(dateTo, "MMM d, yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
+          <div className="flex gap-1 ml-2">
+            {[7, 14, 30, 90].map((days) => (
+              <Button key={days} variant="ghost" size="sm" onClick={() => { setDateFrom(subDays(new Date(), days)); setDateTo(new Date()); }}>
+                {days}d
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Unique Users per Day */}
