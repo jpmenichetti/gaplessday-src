@@ -1,4 +1,5 @@
 import { Todo, TodoCategory, CATEGORY_CONFIG, isOverdue } from "@/hooks/useTodos";
+import { useSimulatedTime } from "@/hooks/useSimulatedTime";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,8 @@ type Props = {
 };
 
 export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }: Props) {
-  const overdue = isOverdue(todo);
+  const { getNow } = useSimulatedTime();
+  const overdue = isOverdue(todo, getNow());
   const config = CATEGORY_CONFIG[todo.category as TodoCategory];
   const hasAttachments = todo.notes || (todo.urls && todo.urls.length > 0) || (todo.images && todo.images.length > 0);
   const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({

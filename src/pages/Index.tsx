@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTodos, Todo, TodoCategory, isOverdue } from "@/hooks/useTodos";
+import { useSimulatedTime } from "@/hooks/useSimulatedTime";
 import { useFilters } from "@/hooks/useFilters";
 import LoginPage from "@/components/LoginPage";
 import Navbar from "@/components/Navbar";
@@ -20,6 +21,7 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, uploadImage, deleteImage } = useTodos();
   const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters } = useFilters();
+  const { getNow } = useSimulatedTime();
   const { showOnboarding, completeOnboarding } = useOnboarding();
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [dialogReadOnly, setDialogReadOnly] = useState(false);
@@ -32,10 +34,10 @@ const Index = () => {
 
   const filteredTodos = useMemo(() => {
     let result = todos;
-    if (showOverdue) result = result.filter((t) => isOverdue(t));
+    if (showOverdue) result = result.filter((t) => isOverdue(t, getNow()));
     if (selectedTags.length > 0) result = result.filter((t) => selectedTags.every((tag) => (t.tags || []).includes(tag)));
     return result;
-  }, [todos, showOverdue, selectedTags]);
+  }, [todos, showOverdue, selectedTags, getNow]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
