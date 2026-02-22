@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useSimulatedTime } from "./useSimulatedTime";
@@ -17,7 +17,7 @@ export const CATEGORY_CONFIG: Record<TodoCategory, { label: string; emoji: strin
 
 export function useTodos() {
   const { user } = useAuth();
-  const { getNow } = useSimulatedTime();
+  const { getNow, simulatedDate } = useSimulatedTime();
   const queryClient = useQueryClient();
 
   // Auto-archive completed todos based on lifecycle rules
@@ -66,20 +66,19 @@ export function useTodos() {
     enabled: !!user,
   });
 
-  // Lifecycle transitions: archive completed todos & move next_week → this_week
-  const simulatedNowTime = getNow().getTime();
+  // Real auto-archive/transitions: only when NOT simulating
   useEffect(() => {
+    if (simulatedDate) return; // skip DB writes during simulation
     const todos = todosQuery.data;
     if (!todos || autoArchiveMutation.isPending) return;
 
-    const now = new Date(simulatedNowTime);
+    const now = new Date();
     const idsToArchive: string[] = [];
     const idsToMoveToThisWeek: string[] = [];
 
     for (const todo of todos) {
       const created = new Date(todo.created_at);
 
-      // Move uncompleted "next_week" items to "this_week" when their week arrives
       if (!todo.completed && todo.category === "next_week") {
         const endOfCreatedWeek = new Date(created);
         endOfCreatedWeek.setDate(endOfCreatedWeek.getDate() + (7 - endOfCreatedWeek.getDay()));
@@ -90,7 +89,6 @@ export function useTodos() {
       }
 
       if (!todo.completed || !todo.completed_at) continue;
-
       const completedDate = new Date(todo.completed_at);
 
       if (todo.category === "today") {
@@ -108,13 +106,9 @@ export function useTodos() {
     }
 
     const promises: Promise<void>[] = [];
-
     if (idsToArchive.length > 0) {
-      promises.push(
-        autoArchiveMutation.mutateAsync(idsToArchive)
-      );
+      promises.push(autoArchiveMutation.mutateAsync(idsToArchive));
     }
-
     if (idsToMoveToThisWeek.length > 0) {
       for (const id of idsToMoveToThisWeek) {
         promises.push(
@@ -123,14 +117,13 @@ export function useTodos() {
         );
       }
     }
-
     if (promises.length > 0) {
       Promise.all(promises).then(() => {
         queryClient.invalidateQueries({ queryKey: ["todos"] });
         queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
       });
     }
-  }, [todosQuery.data, simulatedNowTime]);
+  }, [todosQuery.data, simulatedDate]);
 
   const archivedQuery = useQuery({
     queryKey: ["archived-todos", user?.id],
@@ -256,9 +249,62 @@ export function useTodos() {
     },
   });
 
+  // When simulating time, compute virtual state without DB changes
+  const { virtualTodos, virtualArchived } = useMemo(() => {
+    const rawTodos = todosQuery.data || [];
+    const rawArchived = archivedQuery.data || [];
+
+    if (!simulatedDate) {
+      return { virtualTodos: rawTodos, virtualArchived: rawArchived };
+    }
+
+    const now = new Date(simulatedDate);
+    const activeTodos: Todo[] = [];
+    const simulatedArchived: Todo[] = [...rawArchived];
+
+    for (const todo of rawTodos) {
+      const created = new Date(todo.created_at);
+
+      // Move uncompleted next_week → this_week
+      if (!todo.completed && todo.category === "next_week") {
+        const endOfCreatedWeek = new Date(created);
+        endOfCreatedWeek.setDate(endOfCreatedWeek.getDate() + (7 - endOfCreatedWeek.getDay()));
+        endOfCreatedWeek.setHours(23, 59, 59, 999);
+        if (now > endOfCreatedWeek) {
+          activeTodos.push({ ...todo, category: "this_week" });
+          continue;
+        }
+      }
+
+      // Archive completed todos based on lifecycle
+      if (todo.completed && todo.completed_at) {
+        const completedDate = new Date(todo.completed_at);
+        let shouldArchive = false;
+
+        if (todo.category === "today") {
+          shouldArchive = now.toDateString() !== completedDate.toDateString() && now > completedDate;
+        } else if (todo.category === "this_week" || todo.category === "next_week") {
+          const endOfWeek = new Date(completedDate);
+          endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+          endOfWeek.setHours(23, 59, 59, 999);
+          shouldArchive = now > endOfWeek;
+        }
+
+        if (shouldArchive) {
+          simulatedArchived.unshift({ ...todo, removed: true, removed_at: now.toISOString() });
+          continue;
+        }
+      }
+
+      activeTodos.push(todo);
+    }
+
+    return { virtualTodos: activeTodos, virtualArchived: simulatedArchived };
+  }, [todosQuery.data, archivedQuery.data, simulatedDate]);
+
   return {
-    todos: todosQuery.data || [],
-    archived: archivedQuery.data || [],
+    todos: virtualTodos,
+    archived: virtualArchived,
     isLoading: todosQuery.isLoading,
     addTodo,
     updateTodo,
