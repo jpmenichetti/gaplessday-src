@@ -6,12 +6,20 @@ import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useDroppable } from "@dnd-kit/core";
+import { useI18n } from "@/i18n/I18nContext";
 
-const CATEGORY_INFO: Record<TodoCategory, string> = {
-  today: "Tasks here are for today. A task becomes overdue if it's still incomplete after the day it was created.",
-  this_week: "Tasks here are for this week. A task becomes overdue if it's still incomplete after the end of the week it was created in (Sunday 23:59).",
-  next_week: "Tasks here are for next week. These tasks don't have an automatic overdue rule. At the end of the week, remaining tasks will be moved to the \"This Week\" group.",
-  others: "Tasks here have no specific deadline. They never become overdue automatically.",
+const CATEGORY_INFO_KEYS: Record<TodoCategory, string> = {
+  today: "category.info.today",
+  this_week: "category.info.thisWeek",
+  next_week: "category.info.nextWeek",
+  others: "category.info.others",
+};
+
+const CATEGORY_LABEL_KEYS: Record<TodoCategory, string> = {
+  today: "category.today",
+  this_week: "category.thisWeek",
+  next_week: "category.nextWeek",
+  others: "category.others",
 };
 
 type Props = {
@@ -28,6 +36,8 @@ export default function CategorySection({ category, todos, onAdd, onToggle, onRe
   const config = CATEGORY_CONFIG[category];
   const categoryTodos = todos.filter((t) => t.category === category);
   const { setNodeRef, isOver } = useDroppable({ id: category });
+  const { t } = useI18n();
+  const label = t(CATEGORY_LABEL_KEYS[category]);
 
   return (
     <div
@@ -42,7 +52,7 @@ export default function CategorySection({ category, todos, onAdd, onToggle, onRe
       <div className="flex items-center gap-2">
         <span className="text-xl">{config.emoji}</span>
         <h2 className={cn("font-display text-lg font-semibold", config.colorClass)}>
-          {config.label}
+          {label}
         </h2>
         <span className="text-xs text-muted-foreground bg-background rounded-full px-2 py-0.5">
           {categoryTodos.length}
@@ -54,8 +64,8 @@ export default function CategorySection({ category, todos, onAdd, onToggle, onRe
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-64 text-sm" side="top">
-            <p className="font-medium mb-1">{config.label} rules</p>
-            <p className="text-muted-foreground text-xs">{CATEGORY_INFO[category]}</p>
+            <p className="font-medium mb-1">{label} {t("category.rules")}</p>
+            <p className="text-muted-foreground text-xs">{t(CATEGORY_INFO_KEYS[category])}</p>
           </PopoverContent>
         </Popover>
       </div>
@@ -64,7 +74,7 @@ export default function CategorySection({ category, todos, onAdd, onToggle, onRe
 
       <div className="space-y-2">
         {categoryTodos.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-4">No tasks yet</p>
+          <p className="text-center text-sm text-muted-foreground py-4">{t("category.noTasks")}</p>
         ) : (
           categoryTodos.map((todo) => (
             <TodoCard

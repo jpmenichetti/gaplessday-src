@@ -2,7 +2,15 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { TodoCategory, CATEGORY_CONFIG } from "@/hooks/useTodos";
+import { TodoCategory } from "@/hooks/useTodos";
+import { useI18n } from "@/i18n/I18nContext";
+
+const CATEGORY_LABEL_KEYS: Record<TodoCategory, string> = {
+  today: "category.today",
+  this_week: "category.thisWeek",
+  next_week: "category.nextWeek",
+  others: "category.others",
+};
 
 type Props = {
   category: TodoCategory;
@@ -12,7 +20,7 @@ type Props = {
 
 export default function AddTodo({ category, onAdd, isPending }: Props) {
   const [text, setText] = useState("");
-  const config = CATEGORY_CONFIG[category];
+  const { t } = useI18n();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +34,7 @@ export default function AddTodo({ category, onAdd, isPending }: Props) {
       <Input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={`Add to ${config.label}...`}
+        placeholder={t("addTodo.placeholder", { category: t(CATEGORY_LABEL_KEYS[category]) })}
         className="flex-1"
         disabled={isPending}
       />

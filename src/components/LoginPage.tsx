@@ -2,9 +2,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useI18n } from "@/i18n/I18nContext";
 
 export default function LoginPage() {
   const { signInWithGoogle } = useAuth();
+  const { t } = useI18n();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -15,7 +17,7 @@ export default function LoginPage() {
             Gapless<span className="text-accent">Day</span>
           </h1>
           <p className="text-lg text-muted-foreground">
-            Organize your tasks with colorful categories, multimedia notes, and smart lifecycle rules.
+            {t("login.tagline")}
           </p>
         </div>
 
@@ -25,11 +27,11 @@ export default function LoginPage() {
           className="w-full gap-3 bg-primary text-primary-foreground text-base py-6 rounded-xl shadow-lg hover:shadow-xl transition-all"
         >
           <LogIn className="h-5 w-5" />
-          Sign in with Google
+          {t("login.button")}
         </Button>
 
         <p className="text-sm text-muted-foreground">
-          Your todos are private and synced across devices.
+          {t("login.footer")}
         </p>
       </div>
     </div>

@@ -10,6 +10,14 @@ import { cn } from "@/lib/utils";
 import { tagColor } from "@/lib/tagColors";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nContext";
+
+const CATEGORY_LABEL_KEYS: Record<TodoCategory, string> = {
+  today: "category.today",
+  this_week: "category.thisWeek",
+  next_week: "category.nextWeek",
+  others: "category.others",
+};
 
 function useSignedUrl(path: string) {
   const [url, setUrl] = useState<string>("");
@@ -71,6 +79,7 @@ type Props = {
 };
 
 export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, readOnly, allTags = [] }: Props) {
+  const { t } = useI18n();
   const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [localNotes, setLocalNotes] = useState(todo?.notes || "");
@@ -227,7 +236,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 rounded pointer-events-none">
               <div className="flex flex-col items-center gap-2 text-primary">
                 <Upload className="h-8 w-8" />
-                <span className="text-sm font-medium">Drop image to upload</span>
+                <span className="text-sm font-medium">{t("detail.dropImage")}</span>
               </div>
             </div>
           )}
@@ -237,7 +246,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
               <div className="flex items-center gap-2 font-display">
                 <span>{config.emoji}</span>
                 <span className={cn("text-sm font-medium px-2 py-0.5 rounded-full", config.bgClass, config.colorClass)}>
-                  {config.label}
+                  {t(CATEGORY_LABEL_KEYS[todo.category as TodoCategory] || "category.others")}
                 </span>
               </div>
               <p className="text-base font-medium text-foreground">{todo.text}</p>
@@ -251,7 +260,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
           <div className="space-y-5">
             {/* Tags */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.tags")}</label>
               <div className="flex flex-wrap gap-1.5">
                 {todo.tags?.map((tag) => (
                   <span key={tag} className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold", tagColor(tag))}>
@@ -273,7 +282,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                     onKeyDown={(e) => {
                       if (e.key === "Enter") { e.preventDefault(); addTag(); }
                     }}
-                    placeholder="Add tag..."
+                    placeholder={t("detail.addTag")}
                     className="h-8 text-sm"
                   />
                   <Button size="sm" variant="outline" onClick={addTag} disabled={!tagInput.trim()}>
@@ -309,14 +318,14 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
 
             {/* Notes */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.notes")}</label>
               <Textarea
                 value={localNotes}
                 onChange={(e) => {
                   setLocalNotes(e.target.value);
                   debouncedUpdateNotes(todo.id, e.target.value);
                 }}
-                placeholder="Add additional notes..."
+                placeholder={t("detail.addNotes")}
                 className="min-h-[100px] text-sm"
                 readOnly={readOnly}
               />
@@ -324,7 +333,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
 
             {/* Images */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Images</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.images")}</label>
               {todo.images && todo.images.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
                   {todo.images.map((img) => (
@@ -342,7 +351,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                 <>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()}>
-                    <Upload className="h-3.5 w-3.5" /> Upload Image
+                    <Upload className="h-3.5 w-3.5" /> {t("detail.uploadImage")}
                   </Button>
                 </>
               )}
@@ -350,7 +359,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
 
             {/* URLs */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Links</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.links")}</label>
               <div className="space-y-1.5">
                 {todo.urls?.map((url) => (
                   <div key={url} className="flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-sm">
