@@ -1,54 +1,94 @@
 
-# Dev Mode: Time Travel for Testing Lifecycle Transitions
+
+# Admin Dashboard with Pre-computed Statistics
 
 ## Overview
-Add a developer/debug panel that lets you simulate time passing so you can instantly test overdue detection, auto-archiving, and category transitions without waiting for real days or weeks.
+Add a role-based admin dashboard at `/admin` that displays pre-computed usage statistics. Admin access is controlled via a `user_roles` table that you populate directly in the database. Statistics are computed by a scheduled edge function and stored in dedicated tables.
 
-## How It Works
-A small "Dev Tools" button appears in the navbar (only in development/preview). Clicking it opens a popover where you can set a simulated date. All lifecycle logic (overdue checks, auto-archive) will use this simulated date instead of `new Date()`.
+## Database Changes
 
-## User Experience
-- A small clock/wrench icon button appears next to the language selector in the navbar
-- Clicking it opens a popover with:
-  - A date picker to set the "simulated now" date
-  - A "Reset to real time" button
-  - Quick shortcuts: "+1 day", "+1 week"
-- When a simulated date is active, a small colored badge indicates time travel is on
-- All overdue styling and auto-archive logic immediately reacts to the simulated date
+### 1. User Roles Table
+A `user_roles` table following security best practices, plus a `has_role` security-definer function to avoid RLS recursion:
 
-## Technical Details
+- `user_roles` table: `id`, `user_id` (FK to auth.users), `role` (enum: admin, moderator, user)
+- RLS: authenticated users can read their own roles only
+- `has_role(uuid, app_role)` function for use in policies
 
-### New Files
+### 2. Statistics Tables
 
-1. **`src/hooks/useSimulatedTime.tsx`** -- A React context that provides a `getNow()` function. By default it returns `new Date()`. When a simulated date is set, it returns that instead. Exposes `simulatedDate`, `setSimulatedDate(date | null)`, and `getNow()`.
+**`admin_stats_summary`** -- single-row table updated periodically:
+- `id` (always 1), `total_users`, `total_todos`, `todos_today_count`, `todos_this_week_count`, `todos_next_week_count`, `todos_others_count`, `computed_at`
 
-2. **`src/components/DevTimeTravel.tsx`** -- The popover UI component with:
-   - Date input field
-   - "+1 Day" and "+1 Week" shortcut buttons
-   - "Reset" button to go back to real time
-   - Visual indicator when time travel is active
+**`admin_stats_daily`** -- one row per day:
+- `id`, `stat_date` (date, unique), `unique_users`, `todos_created`, `todos_completed`, `computed_at`
 
-### Modified Files
+Both tables have RLS policies: SELECT only for users with the `admin` role (via `has_role` function).
 
-1. **`src/App.tsx`** -- Wrap with `SimulatedTimeProvider` (inside `I18nProvider`).
+### 3. Stats Computation Function (DB function)
+A `compute_admin_stats()` PostgreSQL function (security definer) that:
+- Counts total users from `auth.users`
+- Counts total todos and todos per category from `todos`
+- Aggregates daily unique users (from `todos.user_id` + `created_at`), daily todos created, and daily todos completed
+- Upserts results into the two stats tables
 
-2. **`src/components/Navbar.tsx`** -- Add `DevTimeTravel` component next to the language selector.
+### 4. Scheduled Execution
+A `pg_cron` job that calls `compute_admin_stats()` every hour (or on-demand via an edge function the admin can trigger with a "Refresh" button).
 
-3. **`src/hooks/useTodos.ts`** -- Replace `new Date()` in the auto-archive `useEffect` with `getNow()` from the simulated time context. Also remove the `autoArchiveRan` ref guard so it re-runs when the simulated date changes.
+## Edge Function
 
-4. **`src/hooks/useTodos.ts` (`isOverdue` function)** -- This is a standalone export, not inside a hook, so it will accept an optional `now` parameter instead of using `new Date()`. The calling component will pass `getNow()`.
+**`compute-stats`** -- An edge function that:
+- Validates the caller is an admin (checks `user_roles`)
+- Calls `compute_admin_stats()` via RPC
+- Returns success/failure
+- Used for the manual "Refresh Stats" button on the dashboard
 
-5. **`src/pages/Index.tsx`** -- Pass `getNow()` to `isOverdue()` calls in the filtered todos logic.
+## Frontend Changes
 
-### Architecture
+### 1. New Route: `/admin`
+Add to `App.tsx` routing.
 
-The simulated time context stores the override date in React state (no database persistence needed -- this is a dev-only tool). When the simulated date changes:
-- `useTodos` auto-archive effect re-evaluates with the new "now"
-- `isOverdue` recalculates with the new "now"  
-- UI updates instantly showing what would happen at that future date
+### 2. Admin Guard Hook: `useAdminCheck`
+- Queries `user_roles` for the current user
+- Returns `{ isAdmin, isLoading }`
+- Redirects non-admins to `/`
 
-### Testing Workflow Example
-1. Create a "Today" task and complete it
-2. Open Dev Tools, click "+1 Day"
-3. The completed task auto-archives immediately
-4. Click "Reset" to return to real time
+### 3. New Page: `src/pages/Admin.tsx`
+- Protected by `useAdminCheck`
+- Displays summary cards (total users, total todos, todos per group)
+- Displays two time-series charts using Recharts (already installed):
+  - Unique users per day
+  - Todos created vs completed per day
+- "Refresh Stats" button that invokes the edge function
+- Navigation back to main app
+
+### 4. Navbar Update
+- Show an "Admin" link in the navbar if the user has the admin role
+
+## Technical Flow
+
+```text
+[pg_cron hourly] --> compute_admin_stats() --> admin_stats_summary + admin_stats_daily
+[Admin clicks Refresh] --> compute-stats edge fn --> compute_admin_stats() --> tables
+[Admin page loads] --> SELECT from admin_stats_summary + admin_stats_daily --> Recharts
+```
+
+## Security
+- `user_roles` table with RLS (users can only read their own roles)
+- Stats tables readable only by admins via `has_role()` function
+- Edge function validates admin role server-side before computing
+- No client-side role checks for access control -- all enforced by RLS
+
+## File Summary
+
+| Action | File |
+|--------|------|
+| Migration | `user_roles` table, `app_role` enum, `has_role()` function |
+| Migration | `admin_stats_summary` + `admin_stats_daily` tables with admin-only RLS |
+| Migration | `compute_admin_stats()` DB function |
+| SQL insert | `pg_cron` schedule |
+| Create | `supabase/functions/compute-stats/index.ts` |
+| Create | `src/hooks/useAdminCheck.ts` |
+| Create | `src/pages/Admin.tsx` |
+| Modify | `src/App.tsx` -- add `/admin` route |
+| Modify | `src/components/Navbar.tsx` -- admin link |
+
