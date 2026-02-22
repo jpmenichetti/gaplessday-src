@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Tables } from "@/integrations/supabase/types";
@@ -16,6 +17,24 @@ export const CATEGORY_CONFIG: Record<TodoCategory, { label: string; emoji: strin
 export function useTodos() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Auto-archive completed todos based on lifecycle rules
+  const autoArchiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const now = new Date().toISOString();
+      for (const id of ids) {
+        const { error } = await supabase.from("todos").update({
+          removed: true,
+          removed_at: now,
+        }).eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+    },
+  });
 
   const todosQuery = useQuery({
     queryKey: ["todos", user?.id],
@@ -44,6 +63,42 @@ export function useTodos() {
     },
     enabled: !!user,
   });
+
+  // Auto-archive completed todos based on lifecycle rules
+  const autoArchiveRan = useRef(false);
+  useEffect(() => {
+    const todos = todosQuery.data;
+    if (!todos || autoArchiveRan.current || autoArchiveMutation.isPending) return;
+
+    const now = new Date();
+    const idsToArchive: string[] = [];
+
+    for (const todo of todos) {
+      if (!todo.completed || !todo.completed_at) continue;
+
+      const completedDate = new Date(todo.completed_at);
+
+      if (todo.category === "today") {
+        // Archive if completed on a previous day
+        if (now.toDateString() !== completedDate.toDateString() && now > completedDate) {
+          idsToArchive.push(todo.id);
+        }
+      } else if (todo.category === "this_week" || todo.category === "next_week") {
+        // Archive if completed and the week has ended (past Sunday)
+        const endOfWeek = new Date(completedDate);
+        endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+        endOfWeek.setHours(23, 59, 59, 999);
+        if (now > endOfWeek) {
+          idsToArchive.push(todo.id);
+        }
+      }
+    }
+
+    if (idsToArchive.length > 0) {
+      autoArchiveRan.current = true;
+      autoArchiveMutation.mutate(idsToArchive);
+    }
+  }, [todosQuery.data]);
 
   const archivedQuery = useQuery({
     queryKey: ["archived-todos", user?.id],
