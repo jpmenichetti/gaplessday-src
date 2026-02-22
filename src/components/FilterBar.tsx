@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { tagColor } from "@/lib/tagColors";
+import { useI18n } from "@/i18n/I18nContext";
 
 interface FilterBarProps {
   showOverdue: boolean;
@@ -23,6 +24,8 @@ const FilterBar = ({
   onToggleTag,
   onClear,
 }: FilterBarProps) => {
+  const { t } = useI18n();
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button
@@ -32,7 +35,7 @@ const FilterBar = ({
         className="gap-1.5"
       >
         <AlertTriangle className="h-3.5 w-3.5" />
-        Overdue
+        {t("filter.overdue")}
       </Button>
 
       {allTags.length > 0 && (
@@ -40,7 +43,7 @@ const FilterBar = ({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <Tag className="h-3.5 w-3.5" />
-              Tags
+              {t("filter.tags")}
               {selectedTags.length > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                   {selectedTags.length}
@@ -49,7 +52,7 @@ const FilterBar = ({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-64 p-3" align="start">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Select tags to filter</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">{t("filter.selectTags")}</p>
             <div className="flex flex-wrap gap-1.5">
               {allTags.map((tag) => (
                 <button
@@ -83,7 +86,7 @@ const FilterBar = ({
 
       {hasActiveFilters && (
         <Button variant="ghost" size="sm" onClick={onClear} className="text-muted-foreground">
-          Clear filters
+          {t("filter.clear")}
         </Button>
       )}
     </div>

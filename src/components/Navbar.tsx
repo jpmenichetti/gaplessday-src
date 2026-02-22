@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
+import LanguageSelector from "@/components/LanguageSelector";
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
@@ -17,7 +18,8 @@ export default function Navbar() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <LanguageSelector />
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.user_metadata?.avatar_url} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">

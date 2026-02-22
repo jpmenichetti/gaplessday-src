@@ -6,6 +6,8 @@ import { Trash2, FileText, Image, Link2, ChevronRight, GripVertical } from "luci
 import { cn } from "@/lib/utils";
 import { playCompletionSound } from "@/lib/sounds";
 import { useDraggable } from "@dnd-kit/core";
+import { tagColor } from "@/lib/tagColors";
+import { useI18n } from "@/i18n/I18nContext";
 
 type Props = {
   todo: Todo;
@@ -15,8 +17,6 @@ type Props = {
   readOnly?: boolean;
 };
 
-import { tagColor } from "@/lib/tagColors";
-
 export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }: Props) {
   const overdue = isOverdue(todo);
   const config = CATEGORY_CONFIG[todo.category as TodoCategory];
@@ -25,6 +25,7 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
     id: todo.id,
     disabled: readOnly,
   });
+  const { t } = useI18n();
 
   const style = transform
     ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
@@ -80,7 +81,7 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
 
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span>{new Date(todo.created_at).toLocaleDateString()}</span>
-          {overdue && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">overdue</Badge>}
+          {overdue && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{t("todo.overdue")}</Badge>}
           {hasAttachments && (
             <div className="flex items-center gap-1 text-muted-foreground/70">
               {todo.notes && <FileText className="h-3 w-3" />}
