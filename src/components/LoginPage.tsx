@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useI18n } from "@/i18n/I18nContext";
+import LanguageSelector from "@/components/LanguageSelector";
 
 export default function LoginPage() {
   const { signInWithGoogle } = useAuth();
@@ -10,6 +11,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <div className="mx-4 w-full max-w-md space-y-8 text-center">
         <div className="space-y-4">
           <img src={logo} alt="GaplessDay" className="mx-auto h-20 w-auto" />

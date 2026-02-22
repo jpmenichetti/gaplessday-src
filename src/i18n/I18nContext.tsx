@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import translations, { Language } from "./translations";
+import translations, { Language, LANGUAGES } from "./translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -11,13 +11,39 @@ type I18nContextType = {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
+function getInitialLanguage(): Language {
+  // Check URL param first
+  const params = new URLSearchParams(window.location.search);
+  const urlLang = params.get("lang");
+  if (urlLang && LANGUAGES.some((l) => l.code === urlLang)) {
+    return urlLang as Language;
+  }
+  // Check localStorage for pre-login selection
+  const stored = localStorage.getItem("gaplessday_prelang");
+  if (stored && LANGUAGES.some((l) => l.code === stored)) {
+    return stored as Language;
+  }
+  return "en";
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [language, setLanguageState] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+  const [userPrefLoaded, setUserPrefLoaded] = useState(false);
 
-  // Load language from user_preferences
+  // Persist pre-login language choice
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      localStorage.setItem("gaplessday_prelang", language);
+    }
+  }, [language, user]);
+
+  // Load language from user_preferences when logged in
+  useEffect(() => {
+    if (!user) {
+      setUserPrefLoaded(false);
+      return;
+    }
     supabase
       .from("user_preferences")
       .select("language")
@@ -26,7 +52,23 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         if (data?.language && translations[data.language as Language]) {
           setLanguageState(data.language as Language);
+        } else {
+          // New user: save pre-login language as their preference
+          const preLang = localStorage.getItem("gaplessday_prelang") as Language | null;
+          if (preLang && translations[preLang]) {
+            setLanguageState(preLang);
+            // Will be saved when user_preferences row is created (onboarding upsert)
+            // or save it now
+            supabase
+              .from("user_preferences")
+              .upsert(
+                { user_id: user.id, language: preLang } as any,
+                { onConflict: "user_id" }
+              )
+              .then();
+          }
         }
+        setUserPrefLoaded(true);
       });
   }, [user]);
 
