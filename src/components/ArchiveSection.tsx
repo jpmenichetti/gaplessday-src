@@ -1,8 +1,9 @@
 import { Todo, CATEGORY_CONFIG, TodoCategory } from "@/hooks/useTodos";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Archive, ChevronDown } from "lucide-react";
+import { Archive, ChevronDown, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nContext";
 
@@ -16,9 +17,10 @@ const CATEGORY_LABEL_KEYS: Record<TodoCategory, string> = {
 type Props = {
   todos: Todo[];
   onOpen: (todo: Todo) => void;
+  onRestore?: (id: string) => void;
 };
 
-export default function ArchiveSection({ todos, onOpen }: Props) {
+export default function ArchiveSection({ todos, onOpen, onRestore }: Props) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
 
@@ -51,6 +53,17 @@ export default function ArchiveSection({ todos, onOpen }: Props) {
                   {todo.removed_at && <span>• {t("archive.archived")} {new Date(todo.removed_at).toLocaleDateString()}</span>}
                 </div>
               </div>
+              {onRestore && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onRestore(todo.id); }}
+                  title={t("archive.restore")}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           );
         })}

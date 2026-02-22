@@ -54,6 +54,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.title": "Archive",
     "archive.created": "Created",
     "archive.archived": "Archived",
+    "archive.restore": "Restore",
 
     // Onboarding
     "onboarding.step1.title": "Welcome to GaplessDay!",
@@ -103,6 +104,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.title": "Archivo",
     "archive.created": "Creada",
     "archive.archived": "Archivada",
+    "archive.restore": "Restaurar",
     "onboarding.step1.title": "¡Bienvenido a GaplessDay!",
     "onboarding.step1.description": "Organiza tus tareas en grupos basados en tiempo que te mantienen automáticamente en camino. Sin vacíos, sin tareas olvidadas — solo un día productivo y fluido.",
     "onboarding.step2.title": "Crear tareas",
@@ -150,6 +152,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.title": "Archive",
     "archive.created": "Créée",
     "archive.archived": "Archivée",
+    "archive.restore": "Restaurer",
     "onboarding.step1.title": "Bienvenue sur GaplessDay !",
     "onboarding.step1.description": "Organisez vos tâches en groupes temporels qui vous gardent automatiquement sur la bonne voie. Pas de vide, pas de tâches oubliées — juste une journée productive et fluide.",
     "onboarding.step2.title": "Créer des tâches",
@@ -197,6 +200,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.title": "Archiv",
     "archive.created": "Erstellt",
     "archive.archived": "Archiviert",
+    "archive.restore": "Wiederherstellen",
     "onboarding.step1.title": "Willkommen bei GaplessDay!",
     "onboarding.step1.description": "Organisiere deine Aufgaben in zeitbasierten Gruppen, die dich automatisch auf Kurs halten. Keine Lücken, keine vergessenen Aufgaben — nur ein reibungsloser, produktiver Tag.",
     "onboarding.step2.title": "Aufgaben erstellen",
