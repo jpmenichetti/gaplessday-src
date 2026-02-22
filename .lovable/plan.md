@@ -1,109 +1,54 @@
 
-
-# Internationalization (i18n)
+# Dev Mode: Time Travel for Testing Lifecycle Transitions
 
 ## Overview
-Add multi-language support (English, Spanish, French, German) with a language selector in the navbar. The selected language is persisted in the `user_preferences` database table so it carries across sessions and devices.
+Add a developer/debug panel that lets you simulate time passing so you can instantly test overdue detection, auto-archiving, and category transitions without waiting for real days or weeks.
+
+## How It Works
+A small "Dev Tools" button appears in the navbar (only in development/preview). Clicking it opens a popover where you can set a simulated date. All lifecycle logic (overdue checks, auto-archive) will use this simulated date instead of `new Date()`.
 
 ## User Experience
-- A language selector dropdown appears in the navbar (between the avatar and logout button)
-- Shows a globe icon with the current language code (EN, ES, FR, DE)
-- Changing the language instantly updates all UI text
-- The selection is saved to the database automatically
-- Before login, the app defaults to English
-
-## What Gets Translated
-All hardcoded UI strings across these components:
-- **LoginPage**: tagline, button text, footer text
-- **Navbar**: brand name stays as-is (it's a proper noun)
-- **FilterBar**: "Overdue", "Tags", "Select tags to filter", "Clear filters"
-- **CategorySection**: category labels ("Today", "This Week", etc.), info text, "No tasks yet"
-- **AddTodo**: placeholder text ("Add to Today...")
-- **TodoCard**: "overdue" badge
-- **TodoDetailDialog**: section labels ("Tags", "Notes", "Images", "Links"), placeholders
-- **ArchiveSection**: "Archive", date labels ("Created", "Archived")
-- **OnboardingDialog**: all step titles and descriptions, button labels
+- A small clock/wrench icon button appears next to the language selector in the navbar
+- Clicking it opens a popover with:
+  - A date picker to set the "simulated now" date
+  - A "Reset to real time" button
+  - Quick shortcuts: "+1 day", "+1 week"
+- When a simulated date is active, a small colored badge indicates time travel is on
+- All overdue styling and auto-archive logic immediately reacts to the simulated date
 
 ## Technical Details
 
-### Database Change
-Add a `language` column to the existing `user_preferences` table:
-
-```sql
-ALTER TABLE public.user_preferences
-  ADD COLUMN language text NOT NULL DEFAULT 'en';
-```
-
-The types file will auto-update to reflect this.
-
 ### New Files
 
-1. **`src/i18n/translations.ts`** -- Translation dictionary object with keys for all four languages (en, es, fr, de). Flat key structure like `"filter.overdue"`, `"category.today"`, etc.
+1. **`src/hooks/useSimulatedTime.tsx`** -- A React context that provides a `getNow()` function. By default it returns `new Date()`. When a simulated date is set, it returns that instead. Exposes `simulatedDate`, `setSimulatedDate(date | null)`, and `getNow()`.
 
-2. **`src/i18n/I18nContext.tsx`** -- React context provider exposing:
-   - `t(key)` function to get translated string
-   - `language` current language code
-   - `setLanguage(lang)` to change and persist
-
-3. **`src/components/LanguageSelector.tsx`** -- Dropdown component using the existing Select UI component, showing globe icon + language code.
+2. **`src/components/DevTimeTravel.tsx`** -- The popover UI component with:
+   - Date input field
+   - "+1 Day" and "+1 Week" shortcut buttons
+   - "Reset" button to go back to real time
+   - Visual indicator when time travel is active
 
 ### Modified Files
 
-1. **`src/hooks/useOnboarding.ts`** -- Expand to also fetch/save the `language` field from `user_preferences` (or create a new `useUserPreferences` hook that both onboarding and i18n consume).
+1. **`src/App.tsx`** -- Wrap with `SimulatedTimeProvider` (inside `I18nProvider`).
 
-2. **`src/App.tsx`** -- Wrap the app with `I18nProvider`.
+2. **`src/components/Navbar.tsx`** -- Add `DevTimeTravel` component next to the language selector.
 
-3. **`src/components/Navbar.tsx`** -- Add `LanguageSelector` component.
+3. **`src/hooks/useTodos.ts`** -- Replace `new Date()` in the auto-archive `useEffect` with `getNow()` from the simulated time context. Also remove the `autoArchiveRan` ref guard so it re-runs when the simulated date changes.
 
-4. **`src/components/LoginPage.tsx`** -- Replace hardcoded strings with `t()` calls.
+4. **`src/hooks/useTodos.ts` (`isOverdue` function)** -- This is a standalone export, not inside a hook, so it will accept an optional `now` parameter instead of using `new Date()`. The calling component will pass `getNow()`.
 
-5. **`src/components/FilterBar.tsx`** -- Replace hardcoded strings with `t()` calls.
-
-6. **`src/components/CategorySection.tsx`** -- Replace hardcoded strings with `t()` calls. The `CATEGORY_INFO` and `CATEGORY_CONFIG` labels become dynamic.
-
-7. **`src/hooks/useTodos.ts`** -- Make `CATEGORY_CONFIG.label` either a translation key or move label resolution to components.
-
-8. **`src/components/AddTodo.tsx`** -- Replace placeholder with `t()` call.
-
-9. **`src/components/TodoCard.tsx`** -- Replace "overdue" badge text.
-
-10. **`src/components/TodoDetailDialog.tsx`** -- Replace section labels and placeholders.
-
-11. **`src/components/ArchiveSection.tsx`** -- Replace "Archive", "Created", "Archived" text.
-
-12. **`src/components/OnboardingDialog.tsx`** -- Replace all step content with translated versions.
-
-13. **`src/pages/Index.tsx`** -- Minor adjustments if needed.
+5. **`src/pages/Index.tsx`** -- Pass `getNow()` to `isOverdue()` calls in the filtered todos logic.
 
 ### Architecture
 
-```text
-App
- +-- I18nProvider (context with t(), language, setLanguage)
-      +-- All components use useI18n() hook to get t()
-```
+The simulated time context stores the override date in React state (no database persistence needed -- this is a dev-only tool). When the simulated date changes:
+- `useTodos` auto-archive effect re-evaluates with the new "now"
+- `isOverdue` recalculates with the new "now"  
+- UI updates instantly showing what would happen at that future date
 
-The `I18nProvider` will:
-- Load the language from `user_preferences` on mount (defaults to 'en')
-- Provide `t(key)` that looks up the current language in the translations object
-- On `setLanguage()`, update context state immediately and persist to database via upsert
-
-### Translation Key Structure (sample)
-
-```text
-login.tagline, login.button, login.footer
-nav.signout
-filter.overdue, filter.tags, filter.selectTags, filter.clear
-category.today, category.thisWeek, category.nextWeek, category.others
-category.info.today, category.info.thisWeek, ...
-category.noTasks
-addTodo.placeholder (with {category} interpolation)
-todo.overdue
-detail.tags, detail.notes, detail.images, detail.links
-detail.addTag, detail.addNotes, detail.uploadImage
-archive.title, archive.created, archive.archived
-onboarding.step1.title, onboarding.step1.description, ...
-onboarding.back, onboarding.next, onboarding.getStarted
-lang.en, lang.es, lang.fr, lang.de
-```
-
+### Testing Workflow Example
+1. Create a "Today" task and complete it
+2. Open Dev Tools, click "+1 Day"
+3. The completed task auto-archives immediately
+4. Click "Reset" to return to real time
