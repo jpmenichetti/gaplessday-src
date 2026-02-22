@@ -249,6 +249,37 @@ export function useTodos() {
     },
   });
 
+  const deleteAllTodos = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("todos").delete().eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+    },
+  });
+
+  const bulkInsertTodos = useMutation({
+    mutationFn: async (todos: Array<{
+      text: string; category: string; tags: string[]; notes: string | null;
+      urls: string[]; completed: boolean; completed_at: string | null;
+      removed: boolean; removed_at: string | null; created_at: string; updated_at: string;
+    }>) => {
+      const rows = todos.map((t) => ({ ...t, user_id: user!.id }));
+      // Insert in batches of 500
+      for (let i = 0; i < rows.length; i += 500) {
+        const batch = rows.slice(i, i + 500);
+        const { error } = await supabase.from("todos").insert(batch);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+    },
+  });
+
   // When simulating time, compute virtual state without DB changes
   const { virtualTodos, virtualArchived } = useMemo(() => {
     const rawTodos = todosQuery.data || [];
@@ -313,6 +344,8 @@ export function useTodos() {
     restoreTodo,
     uploadImage,
     deleteImage,
+    deleteAllTodos,
+    bulkInsertTodos,
   };
 }
 

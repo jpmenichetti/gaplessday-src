@@ -1,0 +1,170 @@
+const EXPECTED_HEADERS = [
+  "text", "category", "tags", "notes", "urls",
+  "completed", "completed_at", "removed", "removed_at",
+  "created_at", "updated_at",
+];
+
+const VALID_CATEGORIES = ["today", "this_week", "next_week", "others"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_ROWS = 10_000;
+const MAX_TEXT_LENGTH = 5_000;
+const MAX_TAGS = 50;
+const MAX_URLS = 20;
+const URL_PATTERN = /^https?:\/\/.+/i;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
+function stripHtml(str: string): string {
+  return str.replace(/<[^>]*>/g, "");
+}
+
+function parseBoolean(val: string): boolean | null {
+  const v = val.trim().toLowerCase();
+  if (v === "true") return true;
+  if (v === "false") return false;
+  return null;
+}
+
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        fields.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+  }
+  fields.push(current);
+  return fields;
+}
+
+export interface ImportedTodo {
+  text: string;
+  category: string;
+  tags: string[];
+  notes: string | null;
+  urls: string[];
+  completed: boolean;
+  completed_at: string | null;
+  removed: boolean;
+  removed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImportResult {
+  validTodos: ImportedTodo[];
+  skippedCount: number;
+}
+
+export function validateCsvFile(file: File): string | null {
+  if (file.size > MAX_FILE_SIZE) return "File too large. Maximum size is 5MB.";
+  if (!file.name.toLowerCase().endsWith(".csv")) return "Only CSV files are accepted.";
+  const mime = file.type;
+  if (mime && !mime.includes("csv") && !mime.includes("text/plain") && !mime.includes("application/vnd.ms-excel")) {
+    return "Invalid file type. Please upload a CSV file.";
+  }
+  return null;
+}
+
+export async function importCsvFile(file: File): Promise<ImportResult> {
+  const text = await file.text();
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+
+  if (lines.length < 2) throw new Error("CSV file is empty or has no data rows.");
+  if (lines.length - 1 > MAX_ROWS) throw new Error(`Too many rows. Maximum is ${MAX_ROWS}.`);
+
+  // Validate headers
+  const headers = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
+  for (const expected of EXPECTED_HEADERS) {
+    if (!headers.includes(expected)) {
+      throw new Error(`Missing required column: "${expected}".`);
+    }
+  }
+
+  const headerIndex = Object.fromEntries(headers.map((h, i) => [h, i]));
+  const validTodos: ImportedTodo[] = [];
+  let skippedCount = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const fields = parseCsvLine(lines[i]);
+      const get = (col: string) => (fields[headerIndex[col]] ?? "").trim();
+
+      // Text - required
+      let todoText = stripHtml(get("text")).slice(0, MAX_TEXT_LENGTH);
+      if (!todoText) { skippedCount++; continue; }
+
+      // Category
+      const category = get("category").toLowerCase();
+      if (!VALID_CATEGORIES.includes(category)) { skippedCount++; continue; }
+
+      // Notes
+      let notes: string | null = stripHtml(get("notes")).slice(0, MAX_TEXT_LENGTH) || null;
+
+      // Tags
+      const tagsRaw = get("tags");
+      const tags = tagsRaw
+        ? tagsRaw.split(";").map((t) => stripHtml(t.trim())).filter(Boolean).slice(0, MAX_TAGS)
+        : [];
+
+      // URLs
+      const urlsRaw = get("urls");
+      const urls = urlsRaw
+        ? urlsRaw.split(";").map((u) => u.trim()).filter((u) => URL_PATTERN.test(u)).slice(0, MAX_URLS)
+        : [];
+
+      // Booleans
+      const completed = parseBoolean(get("completed"));
+      const removed = parseBoolean(get("removed"));
+      if (completed === null || removed === null) { skippedCount++; continue; }
+
+      // Dates
+      const created_at = get("created_at");
+      const updated_at = get("updated_at");
+      if (!ISO_DATE_PATTERN.test(created_at) || !ISO_DATE_PATTERN.test(updated_at)) {
+        skippedCount++; continue;
+      }
+
+      const completed_at = get("completed_at");
+      const removed_at = get("removed_at");
+
+      validTodos.push({
+        text: todoText,
+        category,
+        tags,
+        notes,
+        urls,
+        completed,
+        completed_at: completed_at && ISO_DATE_PATTERN.test(completed_at) ? completed_at : null,
+        removed,
+        removed_at: removed_at && ISO_DATE_PATTERN.test(removed_at) ? removed_at : null,
+        created_at,
+        updated_at,
+      });
+    } catch {
+      skippedCount++;
+    }
+  }
+
+  return { validTodos, skippedCount };
+}
