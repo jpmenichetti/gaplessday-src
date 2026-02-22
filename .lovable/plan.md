@@ -1,44 +1,109 @@
 
 
-# Onboarding Experience
+# Internationalization (i18n)
 
 ## Overview
-When a user signs in for the first time, they'll see a multi-step onboarding dialog that walks them through the app's key features. The onboarding state is persisted in the database so it only shows once.
+Add multi-language support (English, Spanish, French, German) with a language selector in the navbar. The selected language is persisted in the `user_preferences` database table so it carries across sessions and devices.
 
-## What the user will see
-A welcoming modal dialog with a stepper/carousel containing these steps:
+## User Experience
+- A language selector dropdown appears in the navbar (between the avatar and logout button)
+- Shows a globe icon with the current language code (EN, ES, FR, DE)
+- Changing the language instantly updates all UI text
+- The selection is saved to the database automatically
+- Before login, the app defaults to English
 
-1. **Welcome** -- Brief intro to GaplessDay: "Organize your tasks into time-based groups that automatically keep you on track."
-2. **Creating Tasks** -- Type in the input field within any category and press the "+" button.
-3. **Task Details** -- Click a task card to open its detail panel where you can add tags, notes, images, and links.
-4. **Drag and Drop** -- Drag tasks between the four groups (Today, This Week, Next Week, Others) to reprioritize.
-5. **Filters** -- Use the Overdue and Tags filter buttons at the top to focus on what matters.
-6. **Automatic Transitions** -- Tasks move between groups automatically based on time rules. Each group header has an info icon explaining its rules.
-
-Each step will have a short title, description, and a relevant icon/emoji. Navigation via "Next" / "Back" / "Get Started" buttons, plus a progress indicator (dots).
+## What Gets Translated
+All hardcoded UI strings across these components:
+- **LoginPage**: tagline, button text, footer text
+- **Navbar**: brand name stays as-is (it's a proper noun)
+- **FilterBar**: "Overdue", "Tags", "Select tags to filter", "Clear filters"
+- **CategorySection**: category labels ("Today", "This Week", etc.), info text, "No tasks yet"
+- **AddTodo**: placeholder text ("Add to Today...")
+- **TodoCard**: "overdue" badge
+- **TodoDetailDialog**: section labels ("Tags", "Notes", "Images", "Links"), placeholders
+- **ArchiveSection**: "Archive", date labels ("Created", "Archived")
+- **OnboardingDialog**: all step titles and descriptions, button labels
 
 ## Technical Details
 
-### Database
-- Add a new `user_preferences` table with columns:
-  - `id` (uuid, PK, default gen_random_uuid())
-  - `user_id` (uuid, unique, not null)
-  - `onboarding_completed` (boolean, default false)
-  - `created_at` / `updated_at` (timestamptz)
-- RLS: users can only read/update their own row
-- Insert a row automatically on first query if none exists
+### Database Change
+Add a `language` column to the existing `user_preferences` table:
+
+```sql
+ALTER TABLE public.user_preferences
+  ADD COLUMN language text NOT NULL DEFAULT 'en';
+```
+
+The types file will auto-update to reflect this.
 
 ### New Files
-- `src/components/OnboardingDialog.tsx` -- The multi-step dialog component with all onboarding content
-- `src/hooks/useOnboarding.ts` -- Hook to check/update onboarding status via the `user_preferences` table
+
+1. **`src/i18n/translations.ts`** -- Translation dictionary object with keys for all four languages (en, es, fr, de). Flat key structure like `"filter.overdue"`, `"category.today"`, etc.
+
+2. **`src/i18n/I18nContext.tsx`** -- React context provider exposing:
+   - `t(key)` function to get translated string
+   - `language` current language code
+   - `setLanguage(lang)` to change and persist
+
+3. **`src/components/LanguageSelector.tsx`** -- Dropdown component using the existing Select UI component, showing globe icon + language code.
 
 ### Modified Files
-- `src/pages/Index.tsx` -- Import and render `OnboardingDialog` after login, passing the onboarding state
 
-### Component Design
-- Uses the existing `Dialog` component from the UI library
-- Step content stored as a simple array of objects (title, description, icon)
-- Progress dots at the bottom, Back/Next/Finish buttons
-- On "Get Started" click, marks `onboarding_completed = true` in the database
-- Clean, minimal design consistent with the existing app theme
+1. **`src/hooks/useOnboarding.ts`** -- Expand to also fetch/save the `language` field from `user_preferences` (or create a new `useUserPreferences` hook that both onboarding and i18n consume).
+
+2. **`src/App.tsx`** -- Wrap the app with `I18nProvider`.
+
+3. **`src/components/Navbar.tsx`** -- Add `LanguageSelector` component.
+
+4. **`src/components/LoginPage.tsx`** -- Replace hardcoded strings with `t()` calls.
+
+5. **`src/components/FilterBar.tsx`** -- Replace hardcoded strings with `t()` calls.
+
+6. **`src/components/CategorySection.tsx`** -- Replace hardcoded strings with `t()` calls. The `CATEGORY_INFO` and `CATEGORY_CONFIG` labels become dynamic.
+
+7. **`src/hooks/useTodos.ts`** -- Make `CATEGORY_CONFIG.label` either a translation key or move label resolution to components.
+
+8. **`src/components/AddTodo.tsx`** -- Replace placeholder with `t()` call.
+
+9. **`src/components/TodoCard.tsx`** -- Replace "overdue" badge text.
+
+10. **`src/components/TodoDetailDialog.tsx`** -- Replace section labels and placeholders.
+
+11. **`src/components/ArchiveSection.tsx`** -- Replace "Archive", "Created", "Archived" text.
+
+12. **`src/components/OnboardingDialog.tsx`** -- Replace all step content with translated versions.
+
+13. **`src/pages/Index.tsx`** -- Minor adjustments if needed.
+
+### Architecture
+
+```text
+App
+ +-- I18nProvider (context with t(), language, setLanguage)
+      +-- All components use useI18n() hook to get t()
+```
+
+The `I18nProvider` will:
+- Load the language from `user_preferences` on mount (defaults to 'en')
+- Provide `t(key)` that looks up the current language in the translations object
+- On `setLanguage()`, update context state immediately and persist to database via upsert
+
+### Translation Key Structure (sample)
+
+```text
+login.tagline, login.button, login.footer
+nav.signout
+filter.overdue, filter.tags, filter.selectTags, filter.clear
+category.today, category.thisWeek, category.nextWeek, category.others
+category.info.today, category.info.thisWeek, ...
+category.noTasks
+addTodo.placeholder (with {category} interpolation)
+todo.overdue
+detail.tags, detail.notes, detail.images, detail.links
+detail.addTag, detail.addNotes, detail.uploadImage
+archive.title, archive.created, archive.archived
+onboarding.step1.title, onboarding.step1.description, ...
+onboarding.back, onboarding.next, onboarding.getStarted
+lang.en, lang.es, lang.fr, lang.de
+```
 
