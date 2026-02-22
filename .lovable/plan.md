@@ -1,94 +1,73 @@
 
+## CSV Backup and Restore for Todos
 
-# Admin Dashboard with Pre-computed Statistics
+### Overview
+Add export and import functionality to let users download their todos as CSV and restore from a previously exported CSV file. The restore operation replaces all existing todos after validating the uploaded file.
 
-## Overview
-Add a role-based admin dashboard at `/admin` that displays pre-computed usage statistics. Admin access is controlled via a `user_roles` table that you populate directly in the database. Statistics are computed by a scheduled edge function and stored in dedicated tables.
+### Export (Download Backup)
+- A download button in the Navbar triggers CSV generation
+- Includes all todo fields except images: text, category, tags, notes, urls, completed, completed_at, removed, removed_at, created_at, updated_at
+- Arrays (tags, urls) are semicolon-separated within their CSV cell
+- File is named `gaplessday-backup-YYYY-MM-DD.csv`
 
-## Database Changes
+### Restore (Upload Backup)
+- An upload button in the Navbar opens a confirmation dialog (AlertDialog)
+- The dialog warns that **all existing todos will be deleted** before restoring
+- User selects a CSV file; on confirmation, the system:
+  1. Validates the file
+  2. Deletes all current todos (active + archived) for the user
+  3. Inserts the parsed todos from the CSV
 
-### 1. User Roles Table
-A `user_roles` table following security best practices, plus a `has_role` security-definer function to avoid RLS recursion:
+### Security Measures for Restore
+- **File type validation**: Only `.csv` extension accepted; MIME type checked
+- **File size limit**: Max 5MB to prevent abuse
+- **Header validation**: The CSV must contain the exact expected column headers
+- **Row limit**: Max 10,000 rows to prevent DoS
+- **Field sanitization**:
+  - `text` and `notes`: trimmed, max 5,000 characters each, HTML tags stripped
+  - `category`: must be one of "today", "this_week", "next_week", "others"
+  - `completed`, `removed`: must parse to boolean
+  - `tags`, `urls`: semicolon-split, each value trimmed, max 50 tags, max 20 URLs
+  - URLs validated against a URL pattern
+  - Dates validated as ISO 8601 format
+- **No script injection**: All text fields are stripped of HTML/script tags before insert
+- Malformed rows are skipped with a count reported to the user via toast
 
-- `user_roles` table: `id`, `user_id` (FK to auth.users), `role` (enum: admin, moderator, user)
-- RLS: authenticated users can read their own roles only
-- `has_role(uuid, app_role)` function for use in policies
+### New Files
+- **`src/lib/exportCsv.ts`** -- CSV generation and download utility
+- **`src/lib/importCsv.ts`** -- CSV parsing, validation, and sanitization utility
 
-### 2. Statistics Tables
+### Modified Files
+- **`src/components/Navbar.tsx`** -- Add export/import buttons; import `useTodos` for data access; add restore confirmation dialog
+- **`src/hooks/useTodos.ts`** -- Add `deleteAllTodos` and `bulkInsertTodos` mutations
+- **`src/i18n/translations.ts`** -- Add translation keys for backup/restore labels and confirmation messages in all 4 languages
 
-**`admin_stats_summary`** -- single-row table updated periodically:
-- `id` (always 1), `total_users`, `total_todos`, `todos_today_count`, `todos_this_week_count`, `todos_next_week_count`, `todos_others_count`, `computed_at`
+### Technical Details
 
-**`admin_stats_daily`** -- one row per day:
-- `id`, `stat_date` (date, unique), `unique_users`, `todos_created`, `todos_completed`, `computed_at`
-
-Both tables have RLS policies: SELECT only for users with the `admin` role (via `has_role` function).
-
-### 3. Stats Computation Function (DB function)
-A `compute_admin_stats()` PostgreSQL function (security definer) that:
-- Counts total users from `auth.users`
-- Counts total todos and todos per category from `todos`
-- Aggregates daily unique users (from `todos.user_id` + `created_at`), daily todos created, and daily todos completed
-- Upserts results into the two stats tables
-
-### 4. Scheduled Execution
-A `pg_cron` job that calls `compute_admin_stats()` every hour (or on-demand via an edge function the admin can trigger with a "Refresh" button).
-
-## Edge Function
-
-**`compute-stats`** -- An edge function that:
-- Validates the caller is an admin (checks `user_roles`)
-- Calls `compute_admin_stats()` via RPC
-- Returns success/failure
-- Used for the manual "Refresh Stats" button on the dashboard
-
-## Frontend Changes
-
-### 1. New Route: `/admin`
-Add to `App.tsx` routing.
-
-### 2. Admin Guard Hook: `useAdminCheck`
-- Queries `user_roles` for the current user
-- Returns `{ isAdmin, isLoading }`
-- Redirects non-admins to `/`
-
-### 3. New Page: `src/pages/Admin.tsx`
-- Protected by `useAdminCheck`
-- Displays summary cards (total users, total todos, todos per group)
-- Displays two time-series charts using Recharts (already installed):
-  - Unique users per day
-  - Todos created vs completed per day
-- "Refresh Stats" button that invokes the edge function
-- Navigation back to main app
-
-### 4. Navbar Update
-- Show an "Admin" link in the navbar if the user has the admin role
-
-## Technical Flow
-
+**`src/lib/exportCsv.ts`**
 ```text
-[pg_cron hourly] --> compute_admin_stats() --> admin_stats_summary + admin_stats_daily
-[Admin clicks Refresh] --> compute-stats edge fn --> compute_admin_stats() --> tables
-[Admin page loads] --> SELECT from admin_stats_summary + admin_stats_daily --> Recharts
+- escapeCsvValue(value): handles commas, quotes, newlines
+- exportTodosCsv(todos): builds CSV string with header row, triggers download
 ```
 
-## Security
-- `user_roles` table with RLS (users can only read their own roles)
-- Stats tables readable only by admins via `has_role()` function
-- Edge function validates admin role server-side before computing
-- No client-side role checks for access control -- all enforced by RLS
+**`src/lib/importCsv.ts`**
+```text
+- parseCsvFile(file): returns parsed rows as objects
+- validateAndSanitize(rows): validates each row, strips HTML, enforces limits
+- Returns { validTodos, skippedCount, errors }
+```
 
-## File Summary
+**`src/hooks/useTodos.ts`** additions
+```text
+- deleteAllTodos mutation: DELETE FROM todos WHERE user_id = current user
+- bulkInsertTodos mutation: INSERT array of sanitized todo objects
+```
 
-| Action | File |
-|--------|------|
-| Migration | `user_roles` table, `app_role` enum, `has_role()` function |
-| Migration | `admin_stats_summary` + `admin_stats_daily` tables with admin-only RLS |
-| Migration | `compute_admin_stats()` DB function |
-| SQL insert | `pg_cron` schedule |
-| Create | `supabase/functions/compute-stats/index.ts` |
-| Create | `src/hooks/useAdminCheck.ts` |
-| Create | `src/pages/Admin.tsx` |
-| Modify | `src/App.tsx` -- add `/admin` route |
-| Modify | `src/components/Navbar.tsx` -- admin link |
-
+**`src/components/Navbar.tsx`** additions
+```text
+- Download icon button: calls exportTodosCsv with all todos
+- Upload icon button: opens hidden file input + AlertDialog confirmation
+- AlertDialog warns about data replacement, shows file name, proceed/cancel
+- On proceed: parse CSV -> validate -> delete all -> bulk insert -> refresh
+- Toast notifications for success/failure with skipped row count
+```
