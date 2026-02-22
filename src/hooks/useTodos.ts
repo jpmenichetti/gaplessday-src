@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { useSimulatedTime } from "./useSimulatedTime";
 import { Tables } from "@/integrations/supabase/types";
 
 export type Todo = Tables<"todos"> & { images?: Tables<"todo_images">[] };
@@ -16,6 +17,7 @@ export const CATEGORY_CONFIG: Record<TodoCategory, { label: string; emoji: strin
 
 export function useTodos() {
   const { user } = useAuth();
+  const { getNow } = useSimulatedTime();
   const queryClient = useQueryClient();
 
   // Auto-archive completed todos based on lifecycle rules
@@ -65,12 +67,12 @@ export function useTodos() {
   });
 
   // Auto-archive completed todos based on lifecycle rules
-  const autoArchiveRan = useRef(false);
+  const simulatedNow = getNow();
   useEffect(() => {
     const todos = todosQuery.data;
-    if (!todos || autoArchiveRan.current || autoArchiveMutation.isPending) return;
+    if (!todos || autoArchiveMutation.isPending) return;
 
-    const now = new Date();
+    const now = getNow();
     const idsToArchive: string[] = [];
 
     for (const todo of todos) {
@@ -95,10 +97,9 @@ export function useTodos() {
     }
 
     if (idsToArchive.length > 0) {
-      autoArchiveRan.current = true;
       autoArchiveMutation.mutate(idsToArchive);
     }
-  }, [todosQuery.data]);
+  }, [todosQuery.data, simulatedNow]);
 
   const archivedQuery = useQuery({
     queryKey: ["archived-todos", user?.id],
@@ -229,9 +230,9 @@ export async function getImageUrl(path: string): Promise<string> {
   return data.signedUrl;
 }
 
-export function isOverdue(todo: Todo): boolean {
+export function isOverdue(todo: Todo, now?: Date): boolean {
   if (todo.completed) return false;
-  const now = new Date();
+  if (!now) now = new Date();
   const created = new Date(todo.created_at);
 
   if (todo.category === "today") {

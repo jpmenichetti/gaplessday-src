@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { I18nProvider } from "@/i18n/I18nContext";
+import { SimulatedTimeProvider } from "@/hooks/useSimulatedTime";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -14,6 +15,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <I18nProvider>
+        <SimulatedTimeProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -24,6 +26,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
+        </SimulatedTimeProvider>
       </I18nProvider>
     </AuthProvider>
   </QueryClientProvider>
