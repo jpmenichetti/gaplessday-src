@@ -43,7 +43,7 @@ export default function Navbar() {
               </Link>
             </Button>
           )}
-          <DevTimeTravel />
+          {isAdmin && <DevTimeTravel />}
           <LanguageSelector />
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.user_metadata?.avatar_url} />
