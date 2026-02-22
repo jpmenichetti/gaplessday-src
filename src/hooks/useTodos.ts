@@ -209,6 +209,22 @@ export function useTodos() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
+  const restoreTodo = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("todos").update({
+        removed: false,
+        removed_at: null,
+        completed: false,
+        completed_at: null,
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+    },
+  });
+
   return {
     todos: todosQuery.data || [],
     archived: archivedQuery.data || [],
@@ -217,6 +233,7 @@ export function useTodos() {
     updateTodo,
     toggleComplete,
     removeTodo,
+    restoreTodo,
     uploadImage,
     deleteImage,
   };

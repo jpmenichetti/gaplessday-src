@@ -19,7 +19,7 @@ const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"]
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, uploadImage, deleteImage } = useTodos();
+  const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, restoreTodo, uploadImage, deleteImage } = useTodos();
   const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters } = useFilters();
   const { getNow } = useSimulatedTime();
   const { showOnboarding, completeOnboarding } = useOnboarding();
@@ -135,7 +135,7 @@ const Index = () => {
               </DragOverlay>
             </DndContext>
 
-            <ArchiveSection todos={archived} onOpen={(todo) => openTodo(todo, true)} />
+            <ArchiveSection todos={archived} onOpen={(todo) => openTodo(todo, true)} onRestore={(id) => restoreTodo.mutate(id)} />
           </>
         )}
       </main>
