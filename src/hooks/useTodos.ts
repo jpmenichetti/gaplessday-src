@@ -66,27 +66,38 @@ export function useTodos() {
     enabled: !!user,
   });
 
-  // Auto-archive completed todos based on lifecycle rules
-  const simulatedNow = getNow();
+  // Lifecycle transitions: archive completed todos & move next_week → this_week
+  const simulatedNowTime = getNow().getTime();
   useEffect(() => {
     const todos = todosQuery.data;
     if (!todos || autoArchiveMutation.isPending) return;
 
-    const now = getNow();
+    const now = new Date(simulatedNowTime);
     const idsToArchive: string[] = [];
+    const idsToMoveToThisWeek: string[] = [];
 
     for (const todo of todos) {
+      const created = new Date(todo.created_at);
+
+      // Move uncompleted "next_week" items to "this_week" when their week arrives
+      if (!todo.completed && todo.category === "next_week") {
+        const endOfCreatedWeek = new Date(created);
+        endOfCreatedWeek.setDate(endOfCreatedWeek.getDate() + (7 - endOfCreatedWeek.getDay()));
+        endOfCreatedWeek.setHours(23, 59, 59, 999);
+        if (now > endOfCreatedWeek) {
+          idsToMoveToThisWeek.push(todo.id);
+        }
+      }
+
       if (!todo.completed || !todo.completed_at) continue;
 
       const completedDate = new Date(todo.completed_at);
 
       if (todo.category === "today") {
-        // Archive if completed on a previous day
         if (now.toDateString() !== completedDate.toDateString() && now > completedDate) {
           idsToArchive.push(todo.id);
         }
       } else if (todo.category === "this_week" || todo.category === "next_week") {
-        // Archive if completed and the week has ended (past Sunday)
         const endOfWeek = new Date(completedDate);
         endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
         endOfWeek.setHours(23, 59, 59, 999);
@@ -96,10 +107,30 @@ export function useTodos() {
       }
     }
 
+    const promises: Promise<void>[] = [];
+
     if (idsToArchive.length > 0) {
-      autoArchiveMutation.mutate(idsToArchive);
+      promises.push(
+        autoArchiveMutation.mutateAsync(idsToArchive)
+      );
     }
-  }, [todosQuery.data, simulatedNow]);
+
+    if (idsToMoveToThisWeek.length > 0) {
+      for (const id of idsToMoveToThisWeek) {
+        promises.push(
+          supabase.from("todos").update({ category: "this_week", created_at: new Date().toISOString() }).eq("id", id)
+            .then(({ error }) => { if (error) console.error(error); }) as Promise<void>
+        );
+      }
+    }
+
+    if (promises.length > 0) {
+      Promise.all(promises).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["todos"] });
+        queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      });
+    }
+  }, [todosQuery.data, simulatedNowTime]);
 
   const archivedQuery = useQuery({
     queryKey: ["archived-todos", user?.id],
