@@ -11,6 +11,8 @@ import TodoDetailDialog from "@/components/TodoDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import TodoCard from "@/components/TodoCard";
+import OnboardingDialog from "@/components/OnboardingDialog";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"];
 
@@ -18,6 +20,7 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, uploadImage, deleteImage } = useTodos();
   const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters } = useFilters();
+  const { showOnboarding, completeOnboarding } = useOnboarding();
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [dialogReadOnly, setDialogReadOnly] = useState(false);
   const [activeDragTodo, setActiveDragTodo] = useState<Todo | null>(null);
@@ -134,6 +137,11 @@ const Index = () => {
           </>
         )}
       </main>
+
+      <OnboardingDialog
+        open={showOnboarding}
+        onComplete={() => completeOnboarding.mutate()}
+      />
 
       <TodoDetailDialog
         todo={liveTodo}
