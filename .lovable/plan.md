@@ -1,66 +1,44 @@
 
-# Filter Bar for Todos
+
+# Onboarding Experience
 
 ## Overview
-Add a filter bar above the category grid that lets you filter by overdue status and specific tags. Filters persist across sessions using the database.
+When a user signs in for the first time, they'll see a multi-step onboarding dialog that walks them through the app's key features. The onboarding state is persisted in the database so it only shows once.
 
-## What You'll See
-- A horizontal filter bar between the navbar and the category grid
-- An "Overdue" toggle button to show only overdue todos
-- A tag dropdown/popover showing all available tags as selectable chips
-- A "Clear filters" button that appears when any filter is active
-- Active filters shown as dismissible badges
+## What the user will see
+A welcoming modal dialog with a stepper/carousel containing these steps:
+
+1. **Welcome** -- Brief intro to GaplessDay: "Organize your tasks into time-based groups that automatically keep you on track."
+2. **Creating Tasks** -- Type in the input field within any category and press the "+" button.
+3. **Task Details** -- Click a task card to open its detail panel where you can add tags, notes, images, and links.
+4. **Drag and Drop** -- Drag tasks between the four groups (Today, This Week, Next Week, Others) to reprioritize.
+5. **Filters** -- Use the Overdue and Tags filter buttons at the top to focus on what matters.
+6. **Automatic Transitions** -- Tasks move between groups automatically based on time rules. Each group header has an info icon explaining its rules.
+
+Each step will have a short title, description, and a relevant icon/emoji. Navigation via "Next" / "Back" / "Get Started" buttons, plus a progress indicator (dots).
 
 ## Technical Details
 
-### 1. New Component: `FilterBar.tsx`
-Create `src/components/FilterBar.tsx` with:
-- A row of filter controls using existing UI components (Button, Badge, Popover)
-- "Overdue" toggle button (highlighted when active)
-- Tag filter: a Popover with all unique tags displayed as clickable chips (multi-select)
-- "Clear filters" button visible only when filters are active
-- Active tag filters shown as small dismissible badges
+### Database
+- Add a new `user_preferences` table with columns:
+  - `id` (uuid, PK, default gen_random_uuid())
+  - `user_id` (uuid, unique, not null)
+  - `onboarding_completed` (boolean, default false)
+  - `created_at` / `updated_at` (timestamptz)
+- RLS: users can only read/update their own row
+- Insert a row automatically on first query if none exists
 
-### 2. Persist Filters in Database
-Add a `user_filters` table to store filter state per user:
-- `id` (uuid, PK)
-- `user_id` (uuid, not null, unique)
-- `show_overdue` (boolean, default false)
-- `selected_tags` (text[], default '{}')
-- RLS policies: users can only read/write their own row
+### New Files
+- `src/components/OnboardingDialog.tsx` -- The multi-step dialog component with all onboarding content
+- `src/hooks/useOnboarding.ts` -- Hook to check/update onboarding status via the `user_preferences` table
 
-### 3. Custom Hook: `useFilters.ts`
-Create `src/hooks/useFilters.ts`:
-- Fetches the user's saved filters from `user_filters` on load
-- Provides `showOverdue`, `selectedTags`, `toggleOverdue`, `toggleTag`, `clearFilters`
-- Upserts filter changes to the database (debounced or on change)
-- Uses React Query for caching
+### Modified Files
+- `src/pages/Index.tsx` -- Import and render `OnboardingDialog` after login, passing the onboarding state
 
-### 4. Update `Index.tsx`
-- Import and render `FilterBar` above the category grid
-- Pass filter state from `useFilters` to `FilterBar`
-- Filter the `todos` array before passing to `CategorySection`:
-  - If `showOverdue` is true, only show todos where `isOverdue(todo)` returns true
-  - If `selectedTags` is non-empty, only show todos that have at least one matching tag
-  - Both filters combine (AND logic)
+### Component Design
+- Uses the existing `Dialog` component from the UI library
+- Step content stored as a simple array of objects (title, description, icon)
+- Progress dots at the bottom, Back/Next/Finish buttons
+- On "Get Started" click, marks `onboarding_completed = true` in the database
+- Clean, minimal design consistent with the existing app theme
 
-### 5. Migration SQL
-```sql
-CREATE TABLE public.user_filters (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL UNIQUE,
-  show_overdue boolean NOT NULL DEFAULT false,
-  selected_tags text[] NOT NULL DEFAULT '{}'::text[],
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.user_filters ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own filters" ON public.user_filters
-  FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own filters" ON public.user_filters
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own filters" ON public.user_filters
-  FOR UPDATE USING (auth.uid() = user_id);
-```
