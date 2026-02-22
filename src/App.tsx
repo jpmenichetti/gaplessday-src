@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { I18nProvider } from "@/i18n/I18nContext";
 import { SimulatedTimeProvider } from "@/hooks/useSimulatedTime";
 import Index from "./pages/Index";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
