@@ -244,7 +244,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
           )}
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 min-w-0 flex-1">
               <div className="flex items-center gap-2 font-display">
                 <span>{config.emoji}</span>
                 <span className={cn("text-sm font-medium px-2 py-0.5 rounded-full", config.bgClass, config.colorClass)}>
