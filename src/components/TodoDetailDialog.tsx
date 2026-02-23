@@ -83,6 +83,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [localNotes, setLocalNotes] = useState(todo?.notes || "");
+  const [localTitle, setLocalTitle] = useState(todo?.text || "");
   const [panelWidth, setPanelWidth] = useState(loadWidth);
   const [isResizing, setIsResizing] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -95,6 +96,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   useEffect(() => {
     if (todo?.id !== prevTodoId.current) {
       setLocalNotes(todo?.notes || "");
+      setLocalTitle(todo?.text || "");
       prevTodoId.current = todo?.id;
       isSavingNotes.current = false;
     }
@@ -249,7 +251,29 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                   {t(CATEGORY_LABEL_KEYS[todo.category as TodoCategory] || "category.others")}
                 </span>
               </div>
-              <p className="text-base font-medium text-foreground">{todo.text}</p>
+              {readOnly ? (
+                <p className="text-base font-medium text-foreground">{todo.text}</p>
+              ) : (
+                <input
+                  value={localTitle}
+                  onChange={(e) => setLocalTitle(e.target.value)}
+                  onBlur={() => {
+                    const trimmed = localTitle.trim();
+                    if (trimmed && trimmed !== todo.text) {
+                      onUpdate(todo.id, { text: trimmed });
+                    } else {
+                      setLocalTitle(todo.text);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="text-base font-medium text-foreground bg-transparent border-none outline-none w-full focus:ring-1 focus:ring-ring rounded px-0"
+                />
+              )}
             </div>
             <button onClick={onClose} className="rounded-sm p-1 opacity-70 hover:opacity-100 transition-opacity">
               <X className="h-4 w-4" />
