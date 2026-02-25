@@ -117,6 +117,14 @@ export default function Navbar() {
               </Button>
             )}
             {isAdmin && <DevTimeTravel />}
+            <LanguageSelector />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
