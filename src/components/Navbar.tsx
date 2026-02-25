@@ -96,17 +96,16 @@ export default function Navbar() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <img src={logo} alt="GaplessDay" className="h-8 w-auto" />
-            <h1 className="font-display text-2xl font-bold tracking-tight">
+            <h1 className="hidden sm:block font-display text-2xl font-bold tracking-tight">
               Gapless<span className="text-accent">Day</span>
             </h1>
           </div>
 
           <div className="flex items-center gap-1">
             {isAdmin && (
-              <Button variant="ghost" size="icon" asChild className="hidden sm:inline-flex sm:w-auto sm:px-3">
+              <Button variant="ghost" size="icon" asChild>
                 <Link to="/admin" className="flex items-center gap-1">
                   <Shield className="h-4 w-4" />
-                  <span className="hidden sm:inline">Admin</span>
                 </Link>
               </Button>
             )}
