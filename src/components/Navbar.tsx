@@ -148,7 +148,7 @@ export default function Navbar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <a
-                    href="https://github.com/jpmenichetti/lovable-tasks/issues/new/choose"
+                    href="https://github.com/jpmenichetti/gaplessday-src/issues/new/choose"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
