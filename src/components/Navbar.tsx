@@ -94,9 +94,9 @@ export default function Navbar() {
     <>
       <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="GaplessDay" className="h-8 w-auto" />
-            <h1 className="hidden sm:block font-display text-2xl font-bold tracking-tight">
+          <div className="flex items-center gap-2 shrink-0">
+            <img src={logo} alt="GaplessDay" className="h-8 w-auto shrink-0" />
+            <h1 className="hidden sm:block font-display text-2xl font-bold tracking-tight whitespace-nowrap">
               Gapless<span className="text-accent">Day</span>
             </h1>
           </div>
