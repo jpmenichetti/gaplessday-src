@@ -95,6 +95,8 @@ const translations: Record<Language, Record<string, string>> = {
     "backup.skippedRows": "({count} rows skipped due to errors)",
     "backup.restoreError": "Failed to restore backup.",
     "backup.noValidRows": "No valid rows found in the CSV file.",
+    "nav.reportIssue": "Report Issue",
+    "nav.signOut": "Sign Out",
   },
   es: {
     "login.tagline": "Organiza tus tareas con categorías coloridas, notas multimedia y reglas de ciclo de vida inteligentes.",
@@ -164,6 +166,8 @@ const translations: Record<Language, Record<string, string>> = {
     "backup.skippedRows": "({count} filas omitidas por errores)",
     "backup.restoreError": "Error al restaurar el respaldo.",
     "backup.noValidRows": "No se encontraron filas válidas en el archivo CSV.",
+    "nav.reportIssue": "Reportar problema",
+    "nav.signOut": "Cerrar sesión",
   },
   fr: {
     "login.tagline": "Organisez vos tâches avec des catégories colorées, des notes multimédias et des règles de cycle de vie intelligentes.",
@@ -233,6 +237,8 @@ const translations: Record<Language, Record<string, string>> = {
     "backup.skippedRows": "({count} lignes ignorées en raison d'erreurs)",
     "backup.restoreError": "Échec de la restauration.",
     "backup.noValidRows": "Aucune ligne valide trouvée dans le fichier CSV.",
+    "nav.reportIssue": "Signaler un problème",
+    "nav.signOut": "Se déconnecter",
   },
   de: {
     "login.tagline": "Organisiere deine Aufgaben mit farbigen Kategorien, Multimedia-Notizen und intelligenten Lebenszyklusregeln.",
@@ -302,6 +308,8 @@ const translations: Record<Language, Record<string, string>> = {
     "backup.skippedRows": "({count} Zeilen wegen Fehler übersprungen)",
     "backup.restoreError": "Wiederherstellung fehlgeschlagen.",
     "backup.noValidRows": "Keine gültigen Zeilen in der CSV-Datei gefunden.",
+    "nav.reportIssue": "Problem melden",
+    "nav.signOut": "Abmelden",
   },
 };
 
