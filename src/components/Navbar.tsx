@@ -103,10 +103,10 @@ export default function Navbar() {
 
           <div className="flex items-center gap-1">
             {isAdmin && (
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="icon" asChild className="sm:w-auto sm:px-3">
                 <Link to="/admin" className="flex items-center gap-1">
                   <Shield className="h-4 w-4" />
-                  Admin
+                  <span className="hidden sm:inline">Admin</span>
                 </Link>
               </Button>
             )}
