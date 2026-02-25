@@ -1,27 +1,92 @@
 
 
-## Allow Editing Todo Title from Details Panel
+## Add Features Showcase Section to the Login Page
 
-### What Changes
+### Overview
 
-The todo title currently displayed as static text (`<p>` tag) in the detail panel header will become an inline-editable field. Clicking on it turns it into an input; pressing Enter or blurring saves the change via the existing `onUpdate` callback.
+Add a scrollable features section below the existing login form on the landing page. The section will use icon-based cards (Lucide icons) arranged in a responsive grid, with a dedicated "Smart Lifecycle" highlight section that explains the automatic transition and overdue rules in detail.
 
-### UI Behavior
+### Layout Structure
 
-- In **read-only mode** (archived todos): title stays as plain text, no editing
-- In **edit mode**: the title text is rendered as an input that looks like plain text until focused
-- Saving triggers on **Enter** key or **blur**
-- Empty titles are rejected (reverts to previous value)
-- Uses the same debounce-free `onUpdate` pattern already used for tags/urls (immediate save)
+```text
++------------------------------------------+
+|           [Logo]                         |
+|        GaplessDay                        |
+|     "Organize your tasks..."             |
+|     [Sign in with Google]                |
+|     "Your todos are private..."          |
++------------------------------------------+
+|                                          |
+|        --- Features Section ---          |
+|                                          |
+|   [LayoutGrid]        [GripVertical]     |
+|   4 Smart Categories  Drag & Drop        |
+|                                          |
+|   [Tag]               [FileText]         |
+|   Tags & Filters      Rich Details       |
+|                                          |
+|   [Download]           [Globe]           |
+|   Backup & Restore     Multi-language    |
+|                                          |
++------------------------------------------+
+|                                          |
+|    --- Smart Lifecycle Rules ---         |
+|    (highlighted section)                 |
+|                                          |
+|  [Clock] Overdue Detection               |
+|  - Today: turns overdue if incomplete    |
+|    after creation day                    |
+|  - This Week: turns overdue if           |
+|    incomplete after Sunday 23:59 of      |
+|    the creation week                     |
+|  - Next Week & Others: never overdue     |
+|                                          |
+|  [ArrowRightLeft] Automatic Transitions  |
+|  - Next Week tasks automatically move    |
+|    to This Week when their creation      |
+|    week ends (Sunday 23:59)              |
+|  - Completed tasks auto-archive:         |
+|    Today tasks archive next day,         |
+|    weekly tasks archive at end of week   |
+|                                          |
++------------------------------------------+
+```
 
-### Technical Changes
+### Technical Details
 
-**`src/components/TodoDetailDialog.tsx`**
-- Add `localTitle` state initialized from `todo.text`, synced when `todo.id` changes (same pattern as `localNotes`)
-- Replace the static `<p>` element showing `todo.text` (around line 207) with:
-  - If `readOnly`: keep as plain `<p>`
-  - If editable: render an `<input>` styled to look like the current text (same font size/weight, transparent background, no visible border until focused)
-- On blur/Enter: if trimmed value is non-empty and different from `todo.text`, call `onUpdate(todo.id, { text: localTitle.trim() })`; if empty, revert to `todo.text`
+**File: `src/components/LoginPage.tsx`**
 
-No new files, no backend changes, no i18n changes needed (the field is user content, not a label).
+- Add a new section below the existing login card (`<div className="mx-4 w-full max-w-md ...">`)
+- The page will scroll naturally since the content exceeds the viewport
+- Change the outer container from `items-center` centering to a vertical scroll layout with top padding
+
+**Feature cards grid (6 cards, 2 columns on desktop, 1 on mobile):**
+
+| Icon | Title | Description |
+|------|-------|-------------|
+| LayoutGrid | 4 Smart Categories | Organize tasks into Today, This Week, Next Week, and Others |
+| GripVertical | Drag & Drop | Move tasks between categories by dragging cards |
+| Tag | Tags & Filters | Label tasks with tags and filter to focus on what matters |
+| FileText | Rich Details | Add notes, images, and links to any task |
+| Download | Backup & Restore | Export and import your data as CSV anytime |
+| Globe | Multi-language | Available in English, Spanish, French, and German |
+
+**Smart Lifecycle highlight section (visually distinct, e.g. bordered card or accent background):**
+
+Two sub-sections with clear rule explanations:
+
+1. **Overdue Detection** (Clock icon)
+   - "Today" tasks: marked overdue if still incomplete after their creation day
+   - "This Week" tasks: marked overdue if still incomplete after Sunday 23:59 of the week they were created
+   - "Next Week" and "Others" tasks: never become overdue
+
+2. **Automatic Transitions** (ArrowRightLeft icon)
+   - Incomplete "Next Week" tasks automatically move to "This Week" when their creation week ends (after Sunday 23:59)
+   - Completed "Today" tasks auto-archive the next day
+   - Completed "This Week" / "Next Week" tasks auto-archive at the end of their completion week
+   - "Others" tasks require manual removal
+
+**No i18n changes** -- the features section will be in English only for now (marketing content, not user-facing app labels). This keeps the change small and focused.
+
+**No new files** -- everything is added within `LoginPage.tsx`. No routing changes needed.
 
