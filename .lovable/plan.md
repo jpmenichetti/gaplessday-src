@@ -1,36 +1,41 @@
 
 
-## Archive All Completed Todos -- Single Button
+## Add Pagination to the Archive List
 
-### Overview
+**GitHub Issue:** [#3 - Add pagination to the archive list](https://github.com/jpmenichetti/gaplessday-src/issues/3)
 
-Add a single "Archive completed" button to the main view that archives all completed (checked) todos at once, across all categories. This gives users a quick way to clean up without waiting for automatic lifecycle transitions.
+### Problem
+
+The archive section currently loads all archived todos in a single query with no limit. As users accumulate archived items, this becomes a performance bottleneck -- both for the database query and for rendering a potentially very long list.
+
+### Solution
+
+Implement cursor-based pagination in the archive section: load a fixed page size (e.g. 20 items), and show a "Load more" button at the bottom to fetch the next page. This uses React Query's `useInfiniteQuery` to handle page state.
 
 ### Changes
 
 **1. `src/hooks/useTodos.ts`**
-- Add a new `archiveCompleted` mutation that finds all non-archived, completed todos and sets `removed: true` and `removed_at: now()` on them in a single batch update
-- Expose it from the hook's return object
+- Replace `archivedQuery` (currently `useQuery`) with `useInfiniteQuery`
+- Each page fetches 20 rows from `todos` where `removed = true`, ordered by `removed_at desc`, using Supabase's `.range(from, to)` for offset-based pagination
+- Expose `fetchNextPage`, `hasNextPage`, and `isFetchingNextPage` from the hook's return alongside the flattened `archived` array
+- Update the `virtualArchived` memo to flatten all pages before applying simulation logic
 
-**2. `src/pages/Index.tsx`**
-- Destructure the new `archiveCompleted` from `useTodos()`
-- Add a button (with `Archive` icon from lucide-react) between the FilterBar and the category grid
-- The button is only visible when there is at least one completed todo in the active list
-- On click, it calls `archiveCompleted.mutate()` and shows a toast confirming how many were archived
-- Disabled while the mutation is pending
+**2. `src/components/ArchiveSection.tsx`**
+- Accept new props: `onLoadMore`, `hasMore`, and `isLoadingMore`
+- Render a "Load more" button at the bottom of the list when `hasMore` is true
+- The button is disabled while `isLoadingMore` is true and shows a loading indicator
 
-**3. `src/i18n/translations.ts`**
-- Add translation keys in all 4 languages:
-  - `todo.archiveCompleted`: button label (e.g., "Archive completed", "Archivar completadas", "Archiver terminees", "Erledigte archivieren")
-  - `todo.archivedCount`: toast message (e.g., "{count} task(s) archived")
+**3. `src/pages/Index.tsx`**
+- Pass the new pagination props (`fetchNextPage`, `hasNextPage`, `isFetchingNextPage`) from `useTodos()` down to `ArchiveSection`
 
-### Design Details
-
-- The button sits in a subtle bar below the filters, aligned right, styled as a `ghost` or `outline` variant with the `Archive` icon
-- It only appears when there are completed todos, keeping the UI clean otherwise
-- Uses the existing `autoArchiveMutation` pattern (batch update of `removed`/`removed_at`) so no new database changes are needed
+**4. `src/i18n/translations.ts`**
+- Add `archive.loadMore` translation key in all 4 languages (e.g. "Load more", "Cargar mas", "Charger plus", "Mehr laden")
 
 ### Technical Notes
 
-- No database or RLS changes required -- reuses the existing `removed`/`removed_at` columns and the user's UPDATE policy
-- The mutation filters completed todos client-side from the already-fetched `todos` array, then sends the batch update to the database
+- Uses `useInfiniteQuery` with offset-based pagination via Supabase `.range()` -- simple and fits the existing `removed_at desc` ordering
+- Page size of 20 keeps initial load fast while still showing a meaningful amount of history
+- The "delete by period" and "delete all" features continue to work against the loaded pages; bulk delete of all archived todos still sends the IDs of what's loaded (users can load more first if needed)
+- The simulation memo (`virtualArchived`) will flatten all fetched pages before prepending simulated archives
+- No database changes required
+
