@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import TodoCard from "@/components/TodoCard";
 import OnboardingDialog from "@/components/OnboardingDialog";
+import WeeklyReportSection from "@/components/WeeklyReportSection";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
 const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"];
@@ -160,6 +161,8 @@ const Index = () => {
                 ) : null}
               </DragOverlay>
             </DndContext>
+
+            <WeeklyReportSection />
 
             <ArchiveSection
               todos={archived}

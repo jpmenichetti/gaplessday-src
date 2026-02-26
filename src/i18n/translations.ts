@@ -101,6 +101,18 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.reportIssue": "Report Issue",
     "nav.signOut": "Sign Out",
 
+    // Weekly report
+    "report.title": "Weekly Report",
+    "report.weekOf": "Week of {start} - {end}",
+    "report.generate": "Generate report",
+    "report.generating": "Generating...",
+    "report.noReports": "No reports yet. Complete some tasks and generate your first weekly report!",
+    "report.pastReports": "Past reports",
+    "report.generated": "Report generated successfully",
+    "report.noTasks": "No completed tasks found for this week",
+    "report.copied": "Report copied to clipboard",
+    "report.copy": "Copy report",
+
     // Features section (login page)
     "features.title": "Features",
     "features.subtitle": "Everything you need to stay on top of your tasks",
@@ -201,6 +213,17 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.reportIssue": "Reportar problema",
     "nav.signOut": "Cerrar sesión",
 
+    "report.title": "Reporte semanal",
+    "report.weekOf": "Semana del {start} - {end}",
+    "report.generate": "Generar reporte",
+    "report.generating": "Generando...",
+    "report.noReports": "Aún no hay reportes. ¡Completa algunas tareas y genera tu primer reporte semanal!",
+    "report.pastReports": "Reportes anteriores",
+    "report.generated": "Reporte generado exitosamente",
+    "report.noTasks": "No se encontraron tareas completadas esta semana",
+    "report.copied": "Reporte copiado al portapapeles",
+    "report.copy": "Copiar reporte",
+
     "features.title": "Funcionalidades",
     "features.subtitle": "Todo lo que necesitas para mantener tus tareas al día",
     "features.categories.title": "4 categorías inteligentes",
@@ -300,6 +323,17 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.reportIssue": "Signaler un problème",
     "nav.signOut": "Se déconnecter",
 
+    "report.title": "Rapport hebdomadaire",
+    "report.weekOf": "Semaine du {start} - {end}",
+    "report.generate": "Générer le rapport",
+    "report.generating": "Génération...",
+    "report.noReports": "Pas encore de rapports. Complétez des tâches et générez votre premier rapport hebdomadaire !",
+    "report.pastReports": "Rapports précédents",
+    "report.generated": "Rapport généré avec succès",
+    "report.noTasks": "Aucune tâche complétée cette semaine",
+    "report.copied": "Rapport copié dans le presse-papiers",
+    "report.copy": "Copier le rapport",
+
     "features.title": "Fonctionnalités",
     "features.subtitle": "Tout ce qu'il faut pour rester maître de vos tâches",
     "features.categories.title": "4 catégories intelligentes",
@@ -398,6 +432,17 @@ const translations: Record<Language, Record<string, string>> = {
     "backup.noValidRows": "Keine gültigen Zeilen in der CSV-Datei gefunden.",
     "nav.reportIssue": "Problem melden",
     "nav.signOut": "Abmelden",
+
+    "report.title": "Wochenbericht",
+    "report.weekOf": "Woche vom {start} - {end}",
+    "report.generate": "Bericht generieren",
+    "report.generating": "Wird generiert...",
+    "report.noReports": "Noch keine Berichte. Erledige einige Aufgaben und erstelle deinen ersten Wochenbericht!",
+    "report.pastReports": "Frühere Berichte",
+    "report.generated": "Bericht erfolgreich erstellt",
+    "report.noTasks": "Keine erledigten Aufgaben diese Woche gefunden",
+    "report.copied": "Bericht in die Zwischenablage kopiert",
+    "report.copy": "Bericht kopieren",
 
     "features.title": "Funktionen",
     "features.subtitle": "Alles, was du brauchst, um deine Aufgaben im Griff zu haben",
