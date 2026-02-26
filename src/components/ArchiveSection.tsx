@@ -36,9 +36,12 @@ type Props = {
   onOpen: (todo: Todo) => void;
   onRestore?: (id: string) => void;
   onPermanentDelete?: (ids: string[]) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 };
 
-export default function ArchiveSection({ todos, onOpen, onRestore, onPermanentDelete }: Props) {
+export default function ArchiveSection({ todos, onOpen, onRestore, onPermanentDelete, onLoadMore, hasMore, isLoadingMore }: Props) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
   const [deleteTarget, setDeleteTarget] = useState<{ type: "single"; id: string } | { type: "period"; label: string; ids: string[] } | null>(null);
@@ -172,6 +175,22 @@ export default function ArchiveSection({ todos, onOpen, onRestore, onPermanentDe
               </div>
             );
           })}
+          {hasMore && onLoadMore && (
+            <div className="flex justify-center pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isLoadingMore}
+                onClick={onLoadMore}
+              >
+                {isLoadingMore ? (
+                  <span className="animate-pulse">{t("archive.loadMore")}...</span>
+                ) : (
+                  t("archive.loadMore")
+                )}
+              </Button>
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
