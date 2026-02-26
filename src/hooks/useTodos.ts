@@ -35,6 +35,7 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
     },
   });
 
@@ -127,6 +128,19 @@ export function useTodos() {
 
   const ARCHIVE_PAGE_SIZE = 20;
 
+  const archivedCountQuery = useQuery({
+    queryKey: ["archived-todos-count", user?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("todos")
+        .select("*", { count: "exact", head: true })
+        .eq("removed", true);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!user,
+  });
+
   const archivedQuery = useInfiniteQuery({
     queryKey: ["archived-todos", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
@@ -191,6 +205,7 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
     },
   });
 
@@ -256,6 +271,7 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
     },
   });
 
@@ -270,6 +286,7 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
     },
   });
 
@@ -281,6 +298,7 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
     },
   });
 
@@ -301,6 +319,7 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
     },
   });
 
@@ -372,12 +391,14 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
     },
   });
 
   return {
     todos: virtualTodos,
     archived: virtualArchived,
+    archivedCount: archivedCountQuery.data ?? 0,
     isLoading: todosQuery.isLoading,
     addTodo,
     updateTodo,
