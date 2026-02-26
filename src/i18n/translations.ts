@@ -66,6 +66,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.confirmDeleteTitle": "Delete permanently?",
     "archive.confirmDeleteDesc": "This will permanently delete {count} archived todo(s). This action cannot be undone.",
     "archive.confirmDeleteBtn": "Delete permanently",
+    "archive.loadMore": "Load more",
 
     // Onboarding
     "onboarding.step1.title": "Welcome to GaplessDay!",
@@ -169,6 +170,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.confirmDeleteTitle": "¿Eliminar permanentemente?",
     "archive.confirmDeleteDesc": "Esto eliminará permanentemente {count} tarea(s) archivada(s). Esta acción no se puede deshacer.",
     "archive.confirmDeleteBtn": "Eliminar permanentemente",
+    "archive.loadMore": "Cargar más",
     "onboarding.step1.title": "¡Bienvenido a GaplessDay!",
     "onboarding.step1.description": "Organiza tus tareas en grupos basados en tiempo que te mantienen automáticamente en camino. Sin vacíos, sin tareas olvidadas — solo un día productivo y fluido.",
     "onboarding.step2.title": "Crear tareas",
@@ -267,6 +269,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.confirmDeleteTitle": "Supprimer définitivement ?",
     "archive.confirmDeleteDesc": "Cela supprimera définitivement {count} tâche(s) archivée(s). Cette action est irréversible.",
     "archive.confirmDeleteBtn": "Supprimer définitivement",
+    "archive.loadMore": "Charger plus",
     "onboarding.step1.title": "Bienvenue sur GaplessDay !",
     "onboarding.step1.description": "Organisez vos tâches en groupes temporels qui vous gardent automatiquement sur la bonne voie. Pas de vide, pas de tâches oubliées — juste une journée productive et fluide.",
     "onboarding.step2.title": "Créer des tâches",
@@ -365,6 +368,7 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.confirmDeleteTitle": "Dauerhaft löschen?",
     "archive.confirmDeleteDesc": "Dies löscht {count} archivierte Aufgabe(n) dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.",
     "archive.confirmDeleteBtn": "Dauerhaft löschen",
+    "archive.loadMore": "Mehr laden",
     "onboarding.step1.title": "Willkommen bei GaplessDay!",
     "onboarding.step1.description": "Organisiere deine Aufgaben in zeitbasierten Gruppen, die dich automatisch auf Kurs halten. Keine Lücken, keine vergessenen Aufgaben — nur ein reibungsloser, produktiver Tag.",
     "onboarding.step2.title": "Aufgaben erstellen",

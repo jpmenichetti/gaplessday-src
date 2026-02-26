@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -125,16 +125,26 @@ export function useTodos() {
     }
   }, [todosQuery.data, simulatedDate]);
 
-  const archivedQuery = useQuery({
+  const ARCHIVE_PAGE_SIZE = 20;
+
+  const archivedQuery = useInfiniteQuery({
     queryKey: ["archived-todos", user?.id],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
+      const from = pageParam * ARCHIVE_PAGE_SIZE;
+      const to = from + ARCHIVE_PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from("todos")
         .select("*")
         .eq("removed", true)
-        .order("removed_at", { ascending: false });
+        .order("removed_at", { ascending: false })
+        .range(from, to);
       if (error) throw error;
       return data as Todo[];
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < ARCHIVE_PAGE_SIZE) return undefined;
+      return allPages.length;
     },
     enabled: !!user,
   });
@@ -297,7 +307,7 @@ export function useTodos() {
   // When simulating time, compute virtual state without DB changes
   const { virtualTodos, virtualArchived } = useMemo(() => {
     const rawTodos = todosQuery.data || [];
-    const rawArchived = archivedQuery.data || [];
+    const rawArchived = archivedQuery.data?.pages?.flat() || [];
 
     if (!simulatedDate) {
       return { virtualTodos: rawTodos, virtualArchived: rawArchived };
@@ -345,7 +355,7 @@ export function useTodos() {
     }
 
     return { virtualTodos: activeTodos, virtualArchived: simulatedArchived };
-  }, [todosQuery.data, archivedQuery.data, simulatedDate]);
+  }, [todosQuery.data, archivedQuery.data?.pages, simulatedDate]);
 
   const archiveCompleted = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -380,6 +390,9 @@ export function useTodos() {
     deleteAllTodos,
     bulkInsertTodos,
     archiveCompleted,
+    fetchNextArchivedPage: archivedQuery.fetchNextPage,
+    hasNextArchivedPage: !!archivedQuery.hasNextPage,
+    isFetchingNextArchivedPage: archivedQuery.isFetchingNextPage,
   };
 }
 
