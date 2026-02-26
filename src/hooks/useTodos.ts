@@ -347,6 +347,24 @@ export function useTodos() {
     return { virtualTodos: activeTodos, virtualArchived: simulatedArchived };
   }, [todosQuery.data, archivedQuery.data, simulatedDate]);
 
+  const archiveCompleted = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const now = new Date().toISOString();
+      for (let i = 0; i < ids.length; i += 500) {
+        const batch = ids.slice(i, i + 500);
+        const { error } = await supabase
+          .from("todos")
+          .update({ removed: true, removed_at: now })
+          .in("id", batch);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+    },
+  });
+
   return {
     todos: virtualTodos,
     archived: virtualArchived,
@@ -361,6 +379,7 @@ export function useTodos() {
     permanentlyDeleteTodos,
     deleteAllTodos,
     bulkInsertTodos,
+    archiveCompleted,
   };
 }
 
