@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTodos, Todo, TodoCategory, isOverdue } from "@/hooks/useTodos";
+import { useI18n } from "@/i18n/I18nContext";
 import { useSimulatedTime } from "@/hooks/useSimulatedTime";
 import { useFilters } from "@/hooks/useFilters";
 import LoginPage from "@/components/LoginPage";
@@ -10,6 +11,9 @@ import CategorySection from "@/components/CategorySection";
 import ArchiveSection from "@/components/ArchiveSection";
 import TodoDetailDialog from "@/components/TodoDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Archive } from "lucide-react";
+import { toast } from "sonner";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import TodoCard from "@/components/TodoCard";
 import OnboardingDialog from "@/components/OnboardingDialog";
@@ -19,7 +23,8 @@ const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"]
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, restoreTodo, permanentlyDeleteTodos, uploadImage, deleteImage } = useTodos();
+  const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, restoreTodo, permanentlyDeleteTodos, uploadImage, deleteImage, archiveCompleted } = useTodos();
+  const { t } = useI18n();
   const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters } = useFilters();
   const { getNow } = useSimulatedTime();
   const { showOnboarding, completeOnboarding } = useOnboarding();
@@ -98,6 +103,27 @@ const Index = () => {
           onToggleTag={toggleTag}
           onClear={clearFilters}
         />
+        {(() => {
+          const completedIds = filteredTodos.filter((t) => t.completed).map((t) => t.id);
+          return completedIds.length > 0 ? (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={archiveCompleted.isPending}
+                onClick={() => {
+                  const count = completedIds.length;
+                  archiveCompleted.mutate(completedIds, {
+                    onSuccess: () => toast(t("todo.archivedCount").replace("{count}", String(count))),
+                  });
+                }}
+              >
+                <Archive className="h-4 w-4 mr-1.5" />
+                {t("todo.archiveCompleted")}
+              </Button>
+            </div>
+          ) : null;
+        })()}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
