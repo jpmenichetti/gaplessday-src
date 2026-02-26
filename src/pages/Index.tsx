@@ -23,7 +23,7 @@ const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"]
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { todos, archived, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, restoreTodo, permanentlyDeleteTodos, uploadImage, deleteImage, archiveCompleted, fetchNextArchivedPage, hasNextArchivedPage, isFetchingNextArchivedPage } = useTodos();
+  const { todos, archived, archivedCount, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, restoreTodo, permanentlyDeleteTodos, uploadImage, deleteImage, archiveCompleted, fetchNextArchivedPage, hasNextArchivedPage, isFetchingNextArchivedPage } = useTodos();
   const { t } = useI18n();
   const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters } = useFilters();
   const { getNow } = useSimulatedTime();
@@ -163,6 +163,7 @@ const Index = () => {
 
             <ArchiveSection
               todos={archived}
+              totalCount={archivedCount}
               onOpen={(todo) => openTodo(todo, true)}
               onRestore={(id) => restoreTodo.mutate(id)}
               onPermanentDelete={(ids) => permanentlyDeleteTodos.mutate(ids)}
