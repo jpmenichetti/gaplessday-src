@@ -39,7 +39,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Todo card
     "todo.overdue": "overdue",
-    "todo.archiveCompleted": "Archive completed",
+    "todo.archiveCompleted": "Archive completed now",
     "todo.archivedCount": "{count} task(s) archived",
 
     // Detail dialog
@@ -146,7 +146,7 @@ const translations: Record<Language, Record<string, string>> = {
     "category.info.others": "Las tareas aquí no tienen fecha límite específica. Nunca se vuelven vencidas automáticamente.",
     "addTodo.placeholder": "Agregar a {category}...",
     "todo.overdue": "vencida",
-    "todo.archiveCompleted": "Archivar completadas",
+    "todo.archiveCompleted": "Archivar completadas ahora",
     "todo.archivedCount": "{count} tarea(s) archivada(s)",
     "detail.tags": "Etiquetas",
     "detail.notes": "Notas",
@@ -244,7 +244,7 @@ const translations: Record<Language, Record<string, string>> = {
     "category.info.others": "Les tâches ici n'ont pas de date limite spécifique. Elles ne deviennent jamais en retard automatiquement.",
     "addTodo.placeholder": "Ajouter à {category}...",
     "todo.overdue": "en retard",
-    "todo.archiveCompleted": "Archiver terminées",
+    "todo.archiveCompleted": "Archiver terminées maintenant",
     "todo.archivedCount": "{count} tâche(s) archivée(s)",
     "detail.tags": "Tags",
     "detail.notes": "Notes",
@@ -342,7 +342,7 @@ const translations: Record<Language, Record<string, string>> = {
     "category.info.others": "Aufgaben hier haben keine bestimmte Frist. Sie werden nie automatisch überfällig.",
     "addTodo.placeholder": "Zu {category} hinzufügen...",
     "todo.overdue": "überfällig",
-    "todo.archiveCompleted": "Erledigte archivieren",
+    "todo.archiveCompleted": "Erledigte jetzt archivieren",
     "todo.archivedCount": "{count} Aufgabe(n) archiviert",
     "detail.tags": "Tags",
     "detail.notes": "Notizen",
