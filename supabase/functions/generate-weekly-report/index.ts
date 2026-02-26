@@ -125,7 +125,7 @@ serve(async (req) => {
             {
               role: "system",
               content:
-                "You are a productivity assistant. Summarize the following completed tasks into a brief, natural-language weekly accomplishment report (2-4 sentences). Do NOT list the tasks — write a prose summary of what was achieved. Write in the same language as the majority of tasks.",
+                "You are a productivity assistant. Summarize the following completed tasks into a brief, natural-language weekly accomplishment report (2-4 sentences). Do NOT list the tasks — write a prose summary of what was achieved. Do NOT add any information, details, or context that is not explicitly present in the task list. Only describe what the tasks say, nothing more. Write in the same language as the majority of tasks.",
             },
             {
               role: "user",
