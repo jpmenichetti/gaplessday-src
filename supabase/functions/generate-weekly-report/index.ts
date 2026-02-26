@@ -57,9 +57,8 @@ serve(async (req) => {
         .from("todos")
         .select("user_id")
         .eq("completed", true)
-        .eq("removed", true)
-        .gte("removed_at", weekStart.toISOString())
-        .lte("removed_at", weekEnd.toISOString());
+        .gte("completed_at", weekStart.toISOString())
+        .lte("completed_at", weekEnd.toISOString());
 
       if (usersErr) throw usersErr;
       userIds = [...new Set((users || []).map((u: { user_id: string }) => u.user_id))];
@@ -94,12 +93,11 @@ serve(async (req) => {
       // Fetch completed & archived todos for this week
       const { data: todos, error: todosErr } = await adminClient
         .from("todos")
-        .select("text, completed_at, removed_at")
+        .select("text, completed_at")
         .eq("user_id", userId)
         .eq("completed", true)
-        .eq("removed", true)
-        .gte("removed_at", weekStart.toISOString())
-        .lte("removed_at", weekEnd.toISOString());
+        .gte("completed_at", weekStart.toISOString())
+        .lte("completed_at", weekEnd.toISOString());
 
       if (todosErr) {
         console.error(`Error fetching todos for ${userId}:`, todosErr);
