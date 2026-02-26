@@ -1,32 +1,36 @@
 
 
-## Avatar Dropdown Menu
+## Archive All Completed Todos -- Single Button
 
 ### Overview
 
-Replace the standalone Export, Import, Sign Out buttons and Avatar with a single clickable Avatar that opens a dropdown menu containing all those actions plus a new "Report Issue" link.
+Add a single "Archive completed" button to the main view that archives all completed (checked) todos at once, across all categories. This gives users a quick way to clean up without waiting for automatic lifecycle transitions.
 
-### What changes
+### Changes
 
-**File: `src/components/Navbar.tsx`**
+**1. `src/hooks/useTodos.ts`**
+- Add a new `archiveCompleted` mutation that finds all non-archived, completed todos and sets `removed: true` and `removed_at: now()` on them in a single batch update
+- Expose it from the hook's return object
 
-1. Import `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator` from `@/components/ui/dropdown-menu` and add `Bug` icon from `lucide-react`.
+**2. `src/pages/Index.tsx`**
+- Destructure the new `archiveCompleted` from `useTodos()`
+- Add a button (with `Archive` icon from lucide-react) between the FilterBar and the category grid
+- The button is only visible when there is at least one completed todo in the active list
+- On click, it calls `archiveCompleted.mutate()` and shows a toast confirming how many were archived
+- Disabled while the mutation is pending
 
-2. Remove the standalone Export, Import, and Sign Out buttons from the navbar (lines 113-135).
+**3. `src/i18n/translations.ts`**
+- Add translation keys in all 4 languages:
+  - `todo.archiveCompleted`: button label (e.g., "Archive completed", "Archivar completadas", "Archiver terminees", "Erledigte archivieren")
+  - `todo.archivedCount`: toast message (e.g., "{count} task(s) archived")
 
-3. Replace the current Avatar + Sign Out button with a `DropdownMenu` where:
-   - **Trigger**: The Avatar (clickable, with cursor-pointer styling)
-   - **Menu items**:
-     - Export (with Download icon) -- calls `handleExport`
-     - Import (with Upload icon) -- triggers `fileInputRef.current?.click()`
-     - Separator
-     - Report Issue (with Bug icon) -- links to `https://github.com/jpmenichetti/lovable-tasks/issues/new/choose` in a new tab
-     - Separator
-     - Sign Out (with LogOut icon) -- calls `signOut`
+### Design Details
 
-4. The hidden file input and AlertDialog remain unchanged.
+- The button sits in a subtle bar below the filters, aligned right, styled as a `ghost` or `outline` variant with the `Archive` icon
+- It only appears when there are completed todos, keeping the UI clean otherwise
+- Uses the existing `autoArchiveMutation` pattern (batch update of `removed`/`removed_at`) so no new database changes are needed
 
-### Result
+### Technical Notes
 
-The navbar will be cleaner with fewer icons. On mobile, only the logo, admin shield (if admin), DevTimeTravel (if admin), LanguageSelector, and Avatar will show. All other actions are accessed via the avatar dropdown.
-
+- No database or RLS changes required -- reuses the existing `removed`/`removed_at` columns and the user's UPDATE policy
+- The mutation filters completed todos client-side from the already-fetched `todos` array, then sends the batch update to the database
