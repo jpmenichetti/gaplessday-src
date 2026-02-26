@@ -1,1 +1,4 @@
 project_id = "plygdadnsjdmwqdhntad"
+
+[functions.generate-weekly-report]
+verify_jwt = false
