@@ -8,10 +8,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, PlusCircle, MousePointerClick, GripVertical, Filter, Clock } from "lucide-react";
+import { Sparkles, PlusCircle, MousePointerClick, GripVertical, Filter, Clock, FileText } from "lucide-react";
 import { useI18n } from "@/i18n/I18nContext";
 
-const STEP_ICONS = [Sparkles, PlusCircle, MousePointerClick, GripVertical, Filter, Clock];
+const STEP_ICONS = [Sparkles, PlusCircle, MousePointerClick, GripVertical, Filter, Clock, FileText];
 
 interface OnboardingDialogProps {
   open: boolean;
