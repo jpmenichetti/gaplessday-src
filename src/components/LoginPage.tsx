@@ -29,9 +29,9 @@ export default function LoginPage() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="mx-4 w-full max-w-md space-y-8 text-center">
           <div className="space-y-4">
-            <img src={logo} alt="GaplessDay" className="mx-auto h-20 w-auto" />
+            <img src={logo} alt="OwlDone" className="mx-auto h-20 w-auto" />
             <h1 className="font-display text-5xl font-bold tracking-tight text-foreground">
-              Gapless<span className="text-accent">Day</span>
+              Owl<span className="text-accent">Done</span>
             </h1>
             <p className="text-lg text-muted-foreground">
               {t("login.tagline")}

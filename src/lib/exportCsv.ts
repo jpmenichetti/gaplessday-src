@@ -49,7 +49,7 @@ export function exportTodosCsv(todos: Todo[]): void {
   const date = new Date().toISOString().slice(0, 10);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `gaplessday-backup-${date}.csv`;
+  link.download = `owldone-backup-${date}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

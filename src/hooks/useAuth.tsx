@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const tryAutoLogin = async () => {
       if (autoLoginAttempted) return;
       autoLoginAttempted = true;
-      const wasSignedIn = localStorage.getItem("gaplessday_was_signed_in");
+      const wasSignedIn = localStorage.getItem("owldone_was_signed_in");
       if (wasSignedIn === "true") {
         await lovable.auth.signInWithOAuth("google", {
           redirect_uri: window.location.origin,
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        localStorage.setItem("gaplessday_was_signed_in", "true");
+        localStorage.setItem("owldone_was_signed_in", "true");
       }
       setLoading(false);
     });
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session) {
-        localStorage.setItem("gaplessday_was_signed_in", "true");
+        localStorage.setItem("owldone_was_signed_in", "true");
         setLoading(false);
       } else {
         tryAutoLogin();
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    localStorage.removeItem("gaplessday_was_signed_in");
+    localStorage.removeItem("owldone_was_signed_in");
     await supabase.auth.signOut();
   };
 

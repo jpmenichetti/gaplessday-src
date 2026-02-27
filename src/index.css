@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -24,7 +24,7 @@
     --muted: 210 15% 93%;
     --muted-foreground: 228 15% 50%;
 
-    --accent: 152 55% 42%;
+    --accent: 35 70% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -66,8 +66,8 @@
     --popover: 228 20% 12%;
     --popover-foreground: 210 20% 95%;
 
-    --primary: 152 55% 48%;
-    --primary-foreground: 228 40% 12%;
+    --primary: 220 30% 50%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 228 15% 18%;
     --secondary-foreground: 210 20% 95%;
@@ -75,7 +75,7 @@
     --muted: 228 15% 18%;
     --muted-foreground: 210 10% 60%;
 
-    --accent: 152 55% 42%;
+    --accent: 35 70% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
@@ -83,7 +83,7 @@
 
     --border: 228 15% 20%;
     --input: 228 15% 20%;
-    --ring: 152 55% 48%;
+    --ring: 35 70% 50%;
 
     --category-today: 0 75% 55%;
     --category-today-bg: 0 75% 15%;
@@ -96,12 +96,12 @@
 
     --sidebar-background: 228 20% 10%;
     --sidebar-foreground: 210 15% 95%;
-    --sidebar-primary: 152 55% 48%;
-    --sidebar-primary-foreground: 228 40% 12%;
+    --sidebar-primary: 220 30% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 228 15% 16%;
     --sidebar-accent-foreground: 210 15% 95%;
     --sidebar-border: 228 15% 16%;
-    --sidebar-ring: 152 55% 48%;
+    --sidebar-ring: 35 70% 50%;
   }
 }
 
@@ -112,10 +112,10 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Nunito', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Nunito', sans-serif;
   }
 }
