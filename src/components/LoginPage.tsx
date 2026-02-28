@@ -53,9 +53,13 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Owl philosophy */}
-      <div className="mx-auto max-w-2xl px-4 pb-4 text-center">
-        <p className="italic text-lg text-muted-foreground leading-relaxed">
+      {/* Divider + description + philosophy */}
+      <div className="mx-auto max-w-2xl px-4 pb-4 space-y-6">
+        <hr className="border-border" />
+        <p className="text-center text-lg text-muted-foreground">
+          OwlDone helps you close each day and see your progress over time.
+        </p>
+        <p className="text-center italic text-lg text-muted-foreground leading-relaxed">
           Owls see in the dark.<br />
           They observe quietly.<br />
           They watch over time.
