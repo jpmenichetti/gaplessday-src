@@ -34,7 +34,7 @@ export default function LoginPage() {
               Owl<span className="text-accent">Done</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              {t("login.tagline")}
+              OwlDone helps you close each day and see your progress over time.
             </p>
           </div>
 
