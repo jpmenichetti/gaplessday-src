@@ -24,9 +24,9 @@ const CATEGORIES: TodoCategory[] = ["today", "this_week", "next_week", "others"]
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { todos, archived, archivedCount, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, restoreTodo, permanentlyDeleteTodos, uploadImage, deleteImage, archiveCompleted, fetchNextArchivedPage, hasNextArchivedPage, isFetchingNextArchivedPage } = useTodos();
+  const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters, searchText, setSearchText, debouncedSearchText } = useFilters();
+  const { todos, archived, archivedCount, isLoading, addTodo, updateTodo, toggleComplete, removeTodo, restoreTodo, permanentlyDeleteTodos, uploadImage, deleteImage, archiveCompleted, fetchNextArchivedPage, hasNextArchivedPage, isFetchingNextArchivedPage } = useTodos(debouncedSearchText);
   const { t } = useI18n();
-  const { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters } = useFilters();
   const { getNow } = useSimulatedTime();
   const { showOnboarding, completeOnboarding } = useOnboarding();
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
@@ -42,8 +42,16 @@ const Index = () => {
     let result = todos;
     if (showOverdue) result = result.filter((t) => isOverdue(t, getNow()));
     if (selectedTags.length > 0) result = result.filter((t) => selectedTags.every((tag) => (t.tags || []).includes(tag)));
+    if (debouncedSearchText) {
+      const lower = debouncedSearchText.toLowerCase();
+      result = result.filter((t) =>
+        t.text.toLowerCase().includes(lower) ||
+        (t.notes || "").toLowerCase().includes(lower) ||
+        (t.urls || []).join(" ").toLowerCase().includes(lower)
+      );
+    }
     return result;
-  }, [todos, showOverdue, selectedTags, getNow]);
+  }, [todos, showOverdue, selectedTags, getNow, debouncedSearchText]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -100,6 +108,8 @@ const Index = () => {
           selectedTags={selectedTags}
           allTags={allTags}
           hasActiveFilters={hasActiveFilters}
+          searchText={searchText}
+          onSearchChange={setSearchText}
           onToggleOverdue={toggleOverdue}
           onToggleTag={toggleTag}
           onClear={clearFilters}

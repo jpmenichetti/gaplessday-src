@@ -19,6 +19,7 @@ const translations: Record<Language, Record<string, string>> = {
     "filter.tags": "Tags",
     "filter.selectTags": "Select tags to filter",
     "filter.clear": "Clear filters",
+    "filter.search": "Search todos...",
 
     // Categories
     "category.today": "Today",
@@ -154,6 +155,7 @@ const translations: Record<Language, Record<string, string>> = {
     "filter.tags": "Etiquetas",
     "filter.selectTags": "Seleccionar etiquetas para filtrar",
     "filter.clear": "Limpiar filtros",
+    "filter.search": "Buscar tareas...",
     "category.today": "Hoy",
     "category.thisWeek": "Esta semana",
     "category.nextWeek": "Próxima semana",
@@ -271,6 +273,7 @@ const translations: Record<Language, Record<string, string>> = {
     "filter.tags": "Tags",
     "filter.selectTags": "Sélectionner des tags pour filtrer",
     "filter.clear": "Effacer les filtres",
+    "filter.search": "Rechercher des tâches...",
     "category.today": "Aujourd'hui",
     "category.thisWeek": "Cette semaine",
     "category.nextWeek": "Semaine prochaine",
@@ -388,6 +391,7 @@ const translations: Record<Language, Record<string, string>> = {
     "filter.tags": "Tags",
     "filter.selectTags": "Tags zum Filtern auswählen",
     "filter.clear": "Filter löschen",
+    "filter.search": "Aufgaben suchen...",
     "category.today": "Heute",
     "category.thisWeek": "Diese Woche",
     "category.nextWeek": "Nächste Woche",

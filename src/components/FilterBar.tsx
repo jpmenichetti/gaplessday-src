@@ -1,6 +1,7 @@
-import { AlertTriangle, Tag, X } from "lucide-react";
+import { AlertTriangle, Tag, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { tagColor } from "@/lib/tagColors";
 import { useI18n } from "@/i18n/I18nContext";
@@ -10,6 +11,8 @@ interface FilterBarProps {
   selectedTags: string[];
   allTags: string[];
   hasActiveFilters: boolean;
+  searchText: string;
+  onSearchChange: (value: string) => void;
   onToggleOverdue: () => void;
   onToggleTag: (tag: string) => void;
   onClear: () => void;
@@ -20,6 +23,8 @@ const FilterBar = ({
   selectedTags,
   allTags,
   hasActiveFilters,
+  searchText,
+  onSearchChange,
   onToggleOverdue,
   onToggleTag,
   onClear,
@@ -28,6 +33,15 @@ const FilterBar = ({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <div className="relative w-full sm:w-56">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          value={searchText}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={t("filter.search")}
+          className="pl-8 h-9 text-sm"
+        />
+      </div>
       <Button
         variant={showOverdue ? "default" : "outline"}
         size="sm"

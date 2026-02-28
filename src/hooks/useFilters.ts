@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -10,6 +11,15 @@ interface UserFilters {
 export function useFilters() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Ephemeral search state with debounce
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearchText, setDebouncedSearchText] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchText(searchText), 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const filtersQuery = useQuery({
     queryKey: ["user-filters", user?.id],
@@ -54,9 +64,10 @@ export function useFilters() {
 
   const clearFilters = () => {
     upsertFilters.mutate({ show_overdue: false, selected_tags: [] });
+    setSearchText("");
   };
 
-  const hasActiveFilters = showOverdue || selectedTags.length > 0;
+  const hasActiveFilters = showOverdue || selectedTags.length > 0 || searchText.length > 0;
 
-  return { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters, isLoading: filtersQuery.isLoading };
+  return { showOverdue, selectedTags, toggleOverdue, toggleTag, clearFilters, hasActiveFilters, isLoading: filtersQuery.isLoading, searchText, setSearchText, debouncedSearchText };
 }
