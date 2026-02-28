@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { LogIn, LayoutGrid, GripVertical, Tag, FileText, Download, Globe, Clock, ArrowRightLeft, Sparkles } from "lucide-react";
+import { LogIn, LayoutGrid, GripVertical, Tag, FileText, Download, Globe, Clock, ArrowRightLeft, Sparkles, Heart, MessageSquare, Github } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useI18n } from "@/i18n/I18nContext";
 import LanguageSelector from "@/components/LanguageSelector";
@@ -115,6 +115,30 @@ export default function LoginPage() {
               <li>{t("features.transitions.othersManual")}</li>
             </ul>
           </div>
+        </div>
+      </div>
+
+      {/* Footer credits */}
+      <div className="mx-auto max-w-2xl px-4 pb-10 space-y-4">
+        <hr className="border-border" />
+        <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            Built with <Heart className="h-4 w-4 text-destructive" /> using{" "}
+            <a href="https://lovable.dev" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2 hover:text-foreground transition-colors">Lovable</a>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <MessageSquare className="h-4 w-4 text-accent" />
+            Icon created with ChatGPT
+          </span>
+          <a
+            href="https://github.com/jpmenichetti/owldone-src"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          >
+            <Github className="h-4 w-4" />
+            View source on GitHub
+          </a>
         </div>
       </div>
     </div>);
