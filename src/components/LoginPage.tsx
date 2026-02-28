@@ -33,9 +33,7 @@ export default function LoginPage() {
             <h1 className="font-display text-5xl font-bold tracking-tight text-foreground">
               Owl<span className="text-accent">Done</span>
             </h1>
-            <p className="text-lg text-muted-foreground">Close the day. See your progress. All done.
-
-            </p>
+            <p className="text-lg text-muted-foreground">{t("login.headline")}</p>
           </div>
 
           <Button
@@ -57,12 +55,12 @@ export default function LoginPage() {
       <div className="mx-auto max-w-2xl px-4 pb-4 space-y-6">
         <hr className="border-border" />
         <p className="text-center text-lg text-muted-foreground">
-          OwlDone helps you close each day and see your progress over time.
+          {t("login.description")}
         </p>
         <p className="text-center italic text-lg text-muted-foreground leading-relaxed">
-          Owls see in the dark.<br />
-          They observe quietly.<br />
-          They watch over time.
+          {t("login.philosophy").split("\n").map((line, i, arr) => (
+            <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+          ))}
         </p>
       </div>
 

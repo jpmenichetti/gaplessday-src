@@ -142,6 +142,9 @@ const translations: Record<Language, Record<string, string>> = {
     "features.transitions.todayArchive": "Completed Today tasks auto-archive the next day",
     "features.transitions.weekArchive": "Completed This Week / Next Week tasks auto-archive at the end of their completion week",
     "features.transitions.othersManual": "Others tasks require manual removal",
+    "login.headline": "Close the day. See your progress.",
+    "login.description": "OwlDone helps you close each day and see your progress over time.",
+    "login.philosophy": "Owls see in the dark.\nThey observe quietly.\nThey watch over time.",
   },
   es: {
     "login.tagline": "Organiza tus tareas con categorías coloridas, notas multimedia y reglas de ciclo de vida inteligentes.",
@@ -256,6 +259,9 @@ const translations: Record<Language, Record<string, string>> = {
     "features.transitions.todayArchive": "Las tareas completadas de Hoy se archivan automáticamente al día siguiente",
     "features.transitions.weekArchive": "Las tareas completadas de Esta semana / Próxima semana se archivan al final de la semana de completación",
     "features.transitions.othersManual": "Las tareas de Otros requieren eliminación manual",
+    "login.headline": "Cierra el día. Observa tu progreso.",
+    "login.description": "OwlDone te ayuda a cerrar cada día y ver tu progreso a lo largo del tiempo.",
+    "login.philosophy": "Los búhos ven en la oscuridad.\nObservan en silencio.\nVigilan a lo largo del tiempo.",
   },
   fr: {
     "login.tagline": "Organisez vos tâches avec des catégories colorées, des notes multimédias et des règles de cycle de vie intelligentes.",
@@ -370,6 +376,9 @@ const translations: Record<Language, Record<string, string>> = {
     "features.transitions.todayArchive": "Les tâches terminées d'Aujourd'hui s'archivent automatiquement le lendemain",
     "features.transitions.weekArchive": "Les tâches terminées de Cette semaine / Semaine prochaine s'archivent à la fin de leur semaine d'achèvement",
     "features.transitions.othersManual": "Les tâches Autres nécessitent une suppression manuelle",
+    "login.headline": "Clôturez la journée. Suivez vos progrès.",
+    "login.description": "OwlDone vous aide à clôturer chaque journée et à suivre vos progrès au fil du temps.",
+    "login.philosophy": "Les hiboux voient dans le noir.\nIls observent en silence.\nIls veillent au fil du temps.",
   },
   de: {
     "login.tagline": "Organisiere deine Aufgaben mit farbigen Kategorien, Multimedia-Notizen und intelligenten Lebenszyklusregeln.",
@@ -484,6 +493,9 @@ const translations: Record<Language, Record<string, string>> = {
     "features.transitions.todayArchive": "Abgeschlossene Heute-Aufgaben werden am nächsten Tag automatisch archiviert",
     "features.transitions.weekArchive": "Abgeschlossene Diese Woche / Nächste Woche-Aufgaben werden am Ende ihrer Abschlusswoche archiviert",
     "features.transitions.othersManual": "Sonstige-Aufgaben erfordern manuelles Entfernen",
+    "login.headline": "Schließe den Tag ab. Sieh deinen Fortschritt.",
+    "login.description": "OwlDone hilft dir, jeden Tag abzuschließen und deinen Fortschritt im Blick zu behalten.",
+    "login.philosophy": "Eulen sehen im Dunkeln.\nSie beobachten still.\nSie wachen über die Zeit.",
   },
 };
 
