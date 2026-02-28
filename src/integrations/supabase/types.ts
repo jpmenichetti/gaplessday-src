@@ -262,12 +262,37 @@ export type Database = {
     }
     Functions: {
       compute_admin_stats: { Args: never; Returns: undefined }
+      count_archived_todos: { Args: { search_term: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      search_archived_todos: {
+        Args: { page_offset: number; page_size: number; search_term: string }
+        Returns: {
+          category: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          removed: boolean
+          removed_at: string | null
+          tags: string[] | null
+          text: string
+          updated_at: string
+          urls: string[] | null
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "todos"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
     }
     Enums: {

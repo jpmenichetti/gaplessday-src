@@ -15,7 +15,7 @@ export const CATEGORY_CONFIG: Record<TodoCategory, { label: string; emoji: strin
   others: { label: "Others", emoji: "🔵", colorClass: "text-category-others", bgClass: "bg-category-others-bg" },
 };
 
-export function useTodos() {
+export function useTodos(searchText = "") {
   const { user } = useAuth();
   const { getNow, simulatedDate } = useSimulatedTime();
   const queryClient = useQueryClient();
@@ -129,8 +129,13 @@ export function useTodos() {
   const ARCHIVE_PAGE_SIZE = 20;
 
   const archivedCountQuery = useQuery({
-    queryKey: ["archived-todos-count", user?.id],
+    queryKey: ["archived-todos-count", user?.id, searchText],
     queryFn: async () => {
+      if (searchText) {
+        const { data, error } = await supabase.rpc("count_archived_todos", { search_term: searchText });
+        if (error) throw error;
+        return (data as number) ?? 0;
+      }
       const { count, error } = await supabase
         .from("todos")
         .select("*", { count: "exact", head: true })
@@ -142,9 +147,18 @@ export function useTodos() {
   });
 
   const archivedQuery = useInfiniteQuery({
-    queryKey: ["archived-todos", user?.id],
+    queryKey: ["archived-todos", user?.id, searchText],
     queryFn: async ({ pageParam = 0 }) => {
       const from = pageParam * ARCHIVE_PAGE_SIZE;
+      if (searchText) {
+        const { data, error } = await supabase.rpc("search_archived_todos", {
+          search_term: searchText,
+          page_size: ARCHIVE_PAGE_SIZE,
+          page_offset: from,
+        });
+        if (error) throw error;
+        return (data as Todo[]) ?? [];
+      }
       const to = from + ARCHIVE_PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from("todos")
