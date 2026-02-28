@@ -6,14 +6,14 @@ import { useI18n } from "@/i18n/I18nContext";
 import LanguageSelector from "@/components/LanguageSelector";
 
 const featureKeys = [
-  { icon: LayoutGrid, titleKey: "features.categories.title", descKey: "features.categories.desc" },
-  { icon: GripVertical, titleKey: "features.dragDrop.title", descKey: "features.dragDrop.desc" },
-  { icon: Tag, titleKey: "features.tags.title", descKey: "features.tags.desc" },
-  { icon: FileText, titleKey: "features.details.title", descKey: "features.details.desc" },
-  { icon: Download, titleKey: "features.backup.title", descKey: "features.backup.desc" },
-  { icon: Globe, titleKey: "features.multiLang.title", descKey: "features.multiLang.desc" },
-  { icon: Sparkles, titleKey: "features.weeklyReport.title", descKey: "features.weeklyReport.desc" },
-];
+{ icon: LayoutGrid, titleKey: "features.categories.title", descKey: "features.categories.desc" },
+{ icon: GripVertical, titleKey: "features.dragDrop.title", descKey: "features.dragDrop.desc" },
+{ icon: Tag, titleKey: "features.tags.title", descKey: "features.tags.desc" },
+{ icon: FileText, titleKey: "features.details.title", descKey: "features.details.desc" },
+{ icon: Download, titleKey: "features.backup.title", descKey: "features.backup.desc" },
+{ icon: Globe, titleKey: "features.multiLang.title", descKey: "features.multiLang.desc" },
+{ icon: Sparkles, titleKey: "features.weeklyReport.title", descKey: "features.weeklyReport.desc" }];
+
 
 export default function LoginPage() {
   const { signInWithGoogle } = useAuth();
@@ -33,16 +33,16 @@ export default function LoginPage() {
             <h1 className="font-display text-5xl font-bold tracking-tight text-foreground">
               Owl<span className="text-accent">Done</span>
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Close the day. See your progress.
+            <p className="text-lg text-muted-foreground">Close the day. See your progress. All done.
+
             </p>
           </div>
 
           <Button
             onClick={signInWithGoogle}
             size="lg"
-            className="w-full gap-3 bg-primary text-primary-foreground text-base py-6 rounded-xl shadow-lg hover:shadow-xl transition-all"
-          >
+            className="w-full gap-3 bg-primary text-primary-foreground text-base py-6 rounded-xl shadow-lg hover:shadow-xl transition-all">
+
             <LogIn className="h-5 w-5" />
             {t("login.button")}
           </Button>
@@ -75,16 +75,16 @@ export default function LoginPage() {
 
         {/* Feature cards grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {featureKeys.map(({ icon: Icon, titleKey, descKey }) => (
-            <div
-              key={titleKey}
-              className="rounded-xl border border-border bg-card p-5 space-y-2"
-            >
+          {featureKeys.map(({ icon: Icon, titleKey, descKey }) =>
+          <div
+            key={titleKey}
+            className="rounded-xl border border-border bg-card p-5 space-y-2">
+
               <Icon className="h-6 w-6 text-accent" />
               <h3 className="font-semibold text-foreground">{t(titleKey)}</h3>
               <p className="text-sm text-muted-foreground">{t(descKey)}</p>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Smart Lifecycle Rules */}
@@ -119,6 +119,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
