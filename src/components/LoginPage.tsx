@@ -53,6 +53,15 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Owl philosophy */}
+      <div className="mx-auto max-w-2xl px-4 pb-4 text-center">
+        <p className="italic text-lg text-muted-foreground leading-relaxed">
+          Owls see in the dark.<br />
+          They observe quietly.<br />
+          They watch over time.
+        </p>
+      </div>
+
       {/* Features section */}
       <div className="mx-auto max-w-2xl px-4 pb-20 space-y-12">
         <div className="text-center space-y-2">
