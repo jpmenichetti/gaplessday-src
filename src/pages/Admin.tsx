@@ -30,6 +30,13 @@ type DailyStat = {
   todos_completed: number;
 };
 
+async function invokeAdmin(action: string) {
+  const { data, error } = await supabase.functions.invoke("admin-api", { body: { action } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export default function Admin() {
   const { isAdmin, isLoading } = useAdminCheck();
   const [summary, setSummary] = useState<StatsSummary | null>(null);
@@ -40,12 +47,12 @@ export default function Admin() {
   const { toast } = useToast();
 
   const fetchStats = async () => {
-    const [summaryRes, dailyRes] = await Promise.all([
-      supabase.from("admin_stats_summary").select("*").eq("id", 1).single(),
-      supabase.from("admin_stats_daily").select("*").order("stat_date", { ascending: true }),
+    const [summaryData, dailyData] = await Promise.all([
+      invokeAdmin("get_summary"),
+      invokeAdmin("get_daily"),
     ]);
-    if (summaryRes.data) setSummary(summaryRes.data as unknown as StatsSummary);
-    if (dailyRes.data) setDaily(dailyRes.data as unknown as DailyStat[]);
+    if (summaryData) setSummary(summaryData as StatsSummary);
+    if (dailyData) setDaily(dailyData as DailyStat[]);
   };
 
   useEffect(() => {
@@ -55,8 +62,7 @@ export default function Admin() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const { error } = await supabase.functions.invoke("compute-stats");
-      if (error) throw error;
+      await invokeAdmin("refresh");
       await fetchStats();
       toast({ title: "Stats refreshed" });
     } catch (e: any) {
@@ -131,7 +137,6 @@ export default function Admin() {
           </p>
         )}
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {summaryCards.map((card) => (
             <Card key={card.title}>
@@ -146,7 +151,6 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* Date Range Filter */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">Date range:</span>
           <Popover>
@@ -181,7 +185,6 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Unique Users per Day */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Unique Users per Day</CardTitle>
@@ -199,7 +202,6 @@ export default function Admin() {
           </CardContent>
         </Card>
 
-        {/* Todos Created vs Completed */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Todos Created vs Completed per Day</CardTitle>

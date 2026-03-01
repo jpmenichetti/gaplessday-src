@@ -19,13 +19,12 @@ export function useWeeklyReports() {
   const reportsQuery = useQuery({
     queryKey: ["weekly-reports", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("weekly_reports" as any)
-        .select("*")
-        .order("week_start", { ascending: false })
-        .limit(12);
+      const { data, error } = await supabase.functions.invoke("user-api", {
+        body: { action: "get_weekly_reports" },
+      });
       if (error) throw error;
-      return data as unknown as WeeklyReport[];
+      if (data?.error) throw new Error(data.error);
+      return data as WeeklyReport[];
     },
     enabled: !!user,
   });
@@ -36,8 +35,7 @@ export function useWeeklyReports() {
         body: {},
       });
       if (error) throw error;
-      
-      // Check for no_tasks result
+
       const results = data?.results as Array<{ user_id: string; status: string }> | undefined;
       if (results && results.length > 0 && results[0].status === "no_tasks") {
         throw new Error("no_tasks");
@@ -45,7 +43,7 @@ export function useWeeklyReports() {
       if (results && results.length > 0 && results[0].status === "rate_limited") {
         throw new Error("rate_limited");
       }
-      
+
       return data;
     },
     onSuccess: () => {

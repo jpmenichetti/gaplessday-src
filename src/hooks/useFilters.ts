@@ -8,6 +8,13 @@ interface UserFilters {
   selected_tags: string[];
 }
 
+async function invoke(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("user-api", { body });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export function useFilters() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -24,12 +31,7 @@ export function useFilters() {
   const filtersQuery = useQuery({
     queryKey: ["user-filters", user?.id],
     queryFn: async (): Promise<UserFilters> => {
-      const { data, error } = await supabase
-        .from("user_filters")
-        .select("show_overdue, selected_tags")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      if (error) throw error;
+      const data = await invoke({ action: "get_filters" });
       return data ?? { show_overdue: false, selected_tags: [] };
     },
     enabled: !!user,
@@ -37,13 +39,7 @@ export function useFilters() {
 
   const upsertFilters = useMutation({
     mutationFn: async (filters: UserFilters) => {
-      const { error } = await supabase
-        .from("user_filters")
-        .upsert(
-          { user_id: user!.id, ...filters },
-          { onConflict: "user_id" }
-        );
-      if (error) throw error;
+      await invoke({ action: "upsert_filters", ...filters });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["user-filters"] }),
   });
