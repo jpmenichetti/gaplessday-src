@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useTodos } from "@/hooks/useTodos";
+// user_roles check now goes through user-api edge function
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -43,13 +44,9 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle()
-      .then(({ data }) => setIsAdmin(!!data));
+    supabase.functions
+      .invoke("user-api", { body: { action: "check_admin" } })
+      .then(({ data, error }) => setIsAdmin(!error && !!data?.isAdmin));
   }, [user]);
 
   const handleExport = () => {

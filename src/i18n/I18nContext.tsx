@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import translations, { Language, LANGUAGES } from "./translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+// Language preferences now go through user-api edge function
 
 type I18nContextType = {
   language: Language;
@@ -44,27 +45,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       setUserPrefLoaded(false);
       return;
     }
-    supabase
-      .from("user_preferences")
-      .select("language")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.language && translations[data.language as Language]) {
+    supabase.functions
+      .invoke("user-api", { body: { action: "get_language" } })
+      .then(({ data, error }) => {
+        if (!error && data?.language && translations[data.language as Language]) {
           setLanguageState(data.language as Language);
         } else {
           // New user: save pre-login language as their preference
           const preLang = localStorage.getItem("gaplessday_prelang") as Language | null;
           if (preLang && translations[preLang]) {
             setLanguageState(preLang);
-            // Will be saved when user_preferences row is created (onboarding upsert)
-            // or save it now
-            supabase
-              .from("user_preferences")
-              .upsert(
-                { user_id: user.id, language: preLang } as any,
-                { onConflict: "user_id" }
-              )
+            supabase.functions
+              .invoke("user-api", { body: { action: "set_language", language: preLang } })
               .then();
           }
         }
@@ -76,12 +68,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     (lang: Language) => {
       setLanguageState(lang);
       if (!user) return;
-      supabase
-        .from("user_preferences")
-        .upsert(
-          { user_id: user.id, language: lang } as any,
-          { onConflict: "user_id" }
-        )
+      supabase.functions
+        .invoke("user-api", { body: { action: "set_language", language: lang } })
         .then();
     },
     [user]

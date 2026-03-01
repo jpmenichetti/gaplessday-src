@@ -99,6 +99,25 @@ Deno.serve(async (req) => {
         return json(data ?? []);
       }
 
+      case "get_language": {
+        const { data, error } = await db
+          .from("user_preferences")
+          .select("language")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (error) throw error;
+        return json({ language: data?.language ?? "en" });
+      }
+
+      case "set_language": {
+        const { language } = params;
+        const { error } = await db
+          .from("user_preferences")
+          .upsert({ user_id: userId, language }, { onConflict: "user_id" });
+        if (error) throw error;
+        return json({ success: true });
+      }
+
       default:
         return json({ error: `Unknown action: ${action}` }, 400);
     }
