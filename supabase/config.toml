@@ -2,3 +2,15 @@ project_id = "plygdadnsjdmwqdhntad"
 
 [functions.generate-weekly-report]
 verify_jwt = false
+
+[functions.todos-api]
+verify_jwt = false
+
+[functions.user-api]
+verify_jwt = false
+
+[functions.images-api]
+verify_jwt = false
+
+[functions.admin-api]
+verify_jwt = false
