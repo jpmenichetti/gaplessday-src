@@ -15,61 +15,44 @@ export const CATEGORY_CONFIG: Record<TodoCategory, { label: string; emoji: strin
   others: { label: "Others", emoji: "🔵", colorClass: "text-category-others", bgClass: "bg-category-others-bg" },
 };
 
+async function invoke(fn: string, body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke(fn, { body });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export function useTodos(searchText = "") {
   const { user } = useAuth();
   const { getNow, simulatedDate } = useSimulatedTime();
   const queryClient = useQueryClient();
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["todos"] });
+    queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
+    queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
+  };
+
   // Auto-archive completed todos based on lifecycle rules
   const autoArchiveMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const now = new Date().toISOString();
-      for (const id of ids) {
-        const { error } = await supabase.from("todos").update({
-          removed: true,
-          removed_at: now,
-        }).eq("id", id);
-        if (error) throw error;
-      }
+    mutationFn: async ({ idsToArchive, idsToMoveToThisWeek }: { idsToArchive: string[]; idsToMoveToThisWeek: string[] }) => {
+      await invoke("todos-api", { action: "auto_transitions", idsToArchive, idsToMoveToThisWeek });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   const todosQuery = useQuery({
     queryKey: ["todos", user?.id],
     queryFn: async () => {
-      const { data: todos, error } = await supabase
-        .from("todos")
-        .select("*")
-        .eq("removed", false)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-
-      const todoIds = todos.map((t) => t.id);
-      let images: Tables<"todo_images">[] = [];
-      if (todoIds.length > 0) {
-        const { data } = await supabase
-          .from("todo_images")
-          .select("*")
-          .in("todo_id", todoIds);
-        images = data || [];
-      }
-
-      return todos.map((t) => ({
-        ...t,
-        images: images.filter((img) => img.todo_id === t.id),
-      })) as Todo[];
+      const data = await invoke("todos-api", { action: "list" });
+      return data as Todo[];
     },
     enabled: !!user,
   });
 
   // Real auto-archive/transitions: only when NOT simulating
   useEffect(() => {
-    if (simulatedDate) return; // skip DB writes during simulation
+    if (simulatedDate) return;
     const todos = todosQuery.data;
     if (!todos || autoArchiveMutation.isPending) return;
 
@@ -106,23 +89,8 @@ export function useTodos(searchText = "") {
       }
     }
 
-    const promises: Promise<void>[] = [];
-    if (idsToArchive.length > 0) {
-      promises.push(autoArchiveMutation.mutateAsync(idsToArchive));
-    }
-    if (idsToMoveToThisWeek.length > 0) {
-      for (const id of idsToMoveToThisWeek) {
-        promises.push(
-          supabase.from("todos").update({ category: "this_week", created_at: new Date().toISOString() }).eq("id", id)
-            .then(({ error }) => { if (error) console.error(error); }) as Promise<void>
-        );
-      }
-    }
-    if (promises.length > 0) {
-      Promise.all(promises).then(() => {
-        queryClient.invalidateQueries({ queryKey: ["todos"] });
-        queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      });
+    if (idsToArchive.length > 0 || idsToMoveToThisWeek.length > 0) {
+      autoArchiveMutation.mutate({ idsToArchive, idsToMoveToThisWeek });
     }
   }, [todosQuery.data, simulatedDate]);
 
@@ -131,17 +99,8 @@ export function useTodos(searchText = "") {
   const archivedCountQuery = useQuery({
     queryKey: ["archived-todos-count", user?.id, searchText],
     queryFn: async () => {
-      if (searchText) {
-        const { data, error } = await supabase.rpc("count_archived_todos", { search_term: searchText });
-        if (error) throw error;
-        return (data as number) ?? 0;
-      }
-      const { count, error } = await supabase
-        .from("todos")
-        .select("*", { count: "exact", head: true })
-        .eq("removed", true);
-      if (error) throw error;
-      return count ?? 0;
+      const data = await invoke("todos-api", { action: "count_archived", searchText });
+      return data.count as number;
     },
     enabled: !!user,
   });
@@ -150,23 +109,12 @@ export function useTodos(searchText = "") {
     queryKey: ["archived-todos", user?.id, searchText],
     queryFn: async ({ pageParam = 0 }) => {
       const from = pageParam * ARCHIVE_PAGE_SIZE;
-      if (searchText) {
-        const { data, error } = await supabase.rpc("search_archived_todos", {
-          search_term: searchText,
-          page_size: ARCHIVE_PAGE_SIZE,
-          page_offset: from,
-        });
-        if (error) throw error;
-        return (data as Todo[]) ?? [];
-      }
-      const to = from + ARCHIVE_PAGE_SIZE - 1;
-      const { data, error } = await supabase
-        .from("todos")
-        .select("*")
-        .eq("removed", true)
-        .order("removed_at", { ascending: false })
-        .range(from, to);
-      if (error) throw error;
+      const data = await invoke("todos-api", {
+        action: "list_archived",
+        searchText,
+        pageSize: ARCHIVE_PAGE_SIZE,
+        pageOffset: from,
+      });
       return data as Todo[];
     },
     initialPageParam: 0,
@@ -179,141 +127,80 @@ export function useTodos(searchText = "") {
 
   const addTodo = useMutation({
     mutationFn: async ({ text, category }: { text: string; category: TodoCategory }) => {
-      const { error } = await supabase.from("todos").insert({
-        text,
-        category,
-        user_id: user!.id,
-      });
-      if (error) throw error;
+      await invoke("todos-api", { action: "add", text, category });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const updateTodo = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Tables<"todos">> & { id: string }) => {
-      const { error } = await supabase.from("todos").update(updates).eq("id", id);
-      if (error) throw error;
+      await invoke("todos-api", { action: "update", id, ...updates });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const toggleComplete = useMutation({
     mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
-      const { error } = await supabase.from("todos").update({
-        completed,
-        completed_at: completed ? new Date().toISOString() : null,
-      }).eq("id", id);
-      if (error) throw error;
+      await invoke("todos-api", { action: "toggle_complete", id, completed });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const removeTodo = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("todos").update({
-        removed: true,
-        removed_at: new Date().toISOString(),
-      }).eq("id", id);
-      if (error) throw error;
+      await invoke("todos-api", { action: "remove", id });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   const uploadImage = useMutation({
     mutationFn: async ({ todoId, file }: { todoId: string; file: File }) => {
-      // Server-side validation: size limit (10MB)
-      const MAX_SIZE = 10 * 1024 * 1024;
-      if (file.size > MAX_SIZE) throw new Error("File too large. Maximum size is 10MB.");
+      // Convert file to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const fileBase64 = btoa(binary);
 
-      // Validate magic bytes to confirm actual image type
-      const header = await file.slice(0, 12).arrayBuffer();
-      const bytes = new Uint8Array(header);
-      const isValidImage =
-        // JPEG: FF D8 FF
-        (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) ||
-        // PNG: 89 50 4E 47
-        (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) ||
-        // GIF: 47 49 46 38
-        (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) ||
-        // WebP: 52 49 46 46 ... 57 45 42 50
-        (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-         bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50);
-
-      if (!isValidImage) throw new Error("Invalid image file. Only JPEG, PNG, GIF, and WebP are allowed.");
-
-      // Sanitize filename: remove path traversal, keep only safe chars
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/\.{2,}/g, ".");
-      const path = `${user!.id}/${todoId}/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("todo-images")
-        .upload(path, file, { contentType: file.type });
-      if (uploadError) throw uploadError;
-
-      const { error: dbError } = await supabase.from("todo_images").insert({
-        todo_id: todoId,
-        storage_path: path,
-        file_name: safeName,
+      await invoke("images-api", {
+        action: "upload",
+        todoId,
+        fileBase64,
+        fileName: file.name,
+        contentType: file.type,
       });
-      if (dbError) throw dbError;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const deleteImage = useMutation({
     mutationFn: async ({ id, storagePath }: { id: string; storagePath: string }) => {
-      await supabase.storage.from("todo-images").remove([storagePath]);
-      const { error } = await supabase.from("todo_images").delete().eq("id", id);
-      if (error) throw error;
+      await invoke("images-api", { action: "delete", id, storagePath });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const restoreTodo = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("todos").update({
-        removed: false,
-        removed_at: null,
-        completed: false,
-        completed_at: null,
-      }).eq("id", id);
-      if (error) throw error;
+      await invoke("todos-api", { action: "restore", id });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   const permanentlyDeleteTodos = useMutation({
     mutationFn: async (ids: string[]) => {
-      for (let i = 0; i < ids.length; i += 500) {
-        const batch = ids.slice(i, i + 500);
-        const { error } = await supabase.from("todos").delete().in("id", batch);
-        if (error) throw error;
-      }
+      await invoke("todos-api", { action: "delete_permanent", ids });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   const deleteAllTodos = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("todos").delete().eq("user_id", user!.id);
-      if (error) throw error;
+      await invoke("todos-api", { action: "delete_all" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   const bulkInsertTodos = useMutation({
@@ -322,19 +209,9 @@ export function useTodos(searchText = "") {
       urls: string[]; completed: boolean; completed_at: string | null;
       removed: boolean; removed_at: string | null; created_at: string; updated_at: string;
     }>) => {
-      const rows = todos.map((t) => ({ ...t, user_id: user!.id }));
-      // Insert in batches of 500
-      for (let i = 0; i < rows.length; i += 500) {
-        const batch = rows.slice(i, i + 500);
-        const { error } = await supabase.from("todos").insert(batch);
-        if (error) throw error;
-      }
+      await invoke("todos-api", { action: "bulk_insert", todos });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   // When simulating time, compute virtual state without DB changes
@@ -353,7 +230,6 @@ export function useTodos(searchText = "") {
     for (const todo of rawTodos) {
       const created = new Date(todo.created_at);
 
-      // Move uncompleted next_week → this_week
       if (!todo.completed && todo.category === "next_week") {
         const endOfCreatedWeek = new Date(created);
         endOfCreatedWeek.setDate(endOfCreatedWeek.getDate() + (7 - endOfCreatedWeek.getDay()));
@@ -364,7 +240,6 @@ export function useTodos(searchText = "") {
         }
       }
 
-      // Archive completed todos based on lifecycle
       if (todo.completed && todo.completed_at) {
         const completedDate = new Date(todo.completed_at);
         let shouldArchive = false;
@@ -392,21 +267,9 @@ export function useTodos(searchText = "") {
 
   const archiveCompleted = useMutation({
     mutationFn: async (ids: string[]) => {
-      const now = new Date().toISOString();
-      for (let i = 0; i < ids.length; i += 500) {
-        const batch = ids.slice(i, i + 500);
-        const { error } = await supabase
-          .from("todos")
-          .update({ removed: true, removed_at: now })
-          .in("id", batch);
-        if (error) throw error;
-      }
+      await invoke("todos-api", { action: "archive_completed", ids });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   return {
@@ -432,10 +295,11 @@ export function useTodos(searchText = "") {
 }
 
 export async function getImageUrl(path: string): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from("todo-images")
-    .createSignedUrl(path, 3600); // 1 hour expiry
+  const { data, error } = await supabase.functions.invoke("images-api", {
+    body: { action: "get_url", storagePath: path },
+  });
   if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data.signedUrl;
 }
 

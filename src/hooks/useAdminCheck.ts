@@ -17,17 +17,13 @@ export function useAdminCheck() {
       return;
     }
 
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setIsAdmin(true);
-        } else {
+    supabase.functions
+      .invoke("user-api", { body: { action: "check_admin" } })
+      .then(({ data, error }) => {
+        if (error || !data?.isAdmin) {
           navigate("/");
+        } else {
+          setIsAdmin(true);
         }
         setIsLoading(false);
       });
