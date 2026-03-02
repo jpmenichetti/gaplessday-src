@@ -1,98 +1,103 @@
 
 
-## Move Client-Side Database Queries to Backend Functions
+## Server-Side API Latency Monitoring
 
 ### Overview
-This refactor moves all direct database calls from browser code into backend functions, creating a proper API layer. After this change, the browser's Network tab will only show function names and JSON payloads -- no table names, column names, or query structure will be visible.
+Add timing instrumentation directly inside each edge function to measure how long every request takes server-side. Store sampled measurements in a new database table and surface them in the admin dashboard.
 
 ### Architecture
 
 ```text
-Browser Hooks              Backend Functions            Database
------------------          --------------------         --------
-useTodos.ts        --->    todos-api/index.ts    --->   todos, todo_images tables
-useFilters.ts      --->    user-api/index.ts     --->   user_filters, user_preferences,
-useOnboarding.ts   --->                                 user_roles tables
-useAdminCheck.ts   --->
-useWeeklyReports.ts --->
-Admin.tsx          --->    admin-api/index.ts     --->   admin_stats_*, user_roles tables
-(image operations) --->    images-api/index.ts    --->   todo_images table + storage bucket
+Edge Functions (todos-api, user-api, images-api, admin-api)
+  |-- Wrap each request handler with performance.now() timing
+  |-- On completion, fire-and-forget INSERT into api_latency_logs table (sampled)
+  |
+Admin Dashboard (/admin)
+  |-- New "API Latency" section with charts
+  |-- p50, p95, p99 per function/action over time
+  |-- Filterable by date range (reuses existing date picker)
+  |-- admin-api gets new actions: get_latency_stats, get_latency_timeseries
 ```
 
-### What Changes
+### Changes
 
-**4 new backend functions:**
+**1. New database table: `api_latency_logs`**
 
-1. **`supabase/functions/todos-api/index.ts`** -- All todo CRUD via `{ action: "..." }` routing
-   - `list`: Fetch active todos with images joined
-   - `list_archived`: Paginated archive (with optional search via existing RPCs)
-   - `count_archived`: Archive count (with optional search)
-   - `add`, `update`, `toggle_complete`, `remove`, `restore`
-   - `delete_permanent`, `delete_all`, `bulk_insert`, `archive_completed`
-   - `auto_transitions`: Archive expired + move next_week to this_week
-   - All queries scoped by authenticated user ID from JWT
+```sql
+CREATE TABLE public.api_latency_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  function_name text NOT NULL,
+  action text NOT NULL,
+  duration_ms integer NOT NULL,
+  status_code integer NOT NULL DEFAULT 200,
+  user_id uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-2. **`supabase/functions/user-api/index.ts`** -- User preferences and roles
-   - `get_filters`, `upsert_filters`
-   - `get_onboarding`, `complete_onboarding`
-   - `check_admin`
-   - `get_weekly_reports`
+-- Index for admin queries
+CREATE INDEX idx_latency_logs_created ON api_latency_logs (created_at DESC);
+CREATE INDEX idx_latency_logs_fn_action ON api_latency_logs (function_name, action);
 
-3. **`supabase/functions/images-api/index.ts`** -- Storage proxy
-   - `upload`: Receive base64 file data, validate, store, create DB record
-   - `delete`: Remove from storage + DB
-   - `get_url`: Return signed URL
+-- No RLS needed -- only edge functions (service role) write to this table, and admin-api reads it
+ALTER TABLE api_latency_logs ENABLE ROW LEVEL SECURITY;
+-- No public policies: only service role can read/write
+```
 
-4. **`supabase/functions/admin-api/index.ts`** -- Admin stats
-   - `get_summary`: Fetch stats summary
-   - `get_daily`: Fetch daily stats
-   - Reuses existing `compute-stats` for refresh, or merges its logic here
+**2. Sampling + logging helper (shared pattern in each edge function)**
 
-**Config update:**
-- `supabase/config.toml`: Add `verify_jwt = false` entries for all 4 new functions (JWT validated in code via `getClaims()`)
+Each function's `Deno.serve` handler gets wrapped with timing logic:
+- Record `performance.now()` at request start
+- After generating the response, compute `duration_ms`
+- Sample at a configurable rate (e.g., 1 in 5 requests = 20%)
+- Fire-and-forget INSERT (no await, so it doesn't add latency to the response)
+- Captures: function_name, action, duration_ms, status_code, user_id
 
-**5 hook/page refactors (same public API, different internals):**
+**3. Update all 4 edge functions**
 
-5. **`src/hooks/useTodos.ts`** -- Replace all `supabase.from("todos")` calls with `supabase.functions.invoke("todos-api", { body: { action, ... } })`. No changes to the hook's return type or mutation signatures.
+Add the timing wrapper to: `todos-api`, `user-api`, `images-api`, `admin-api`. The pattern is identical -- wrap the existing try/catch, compute duration, conditionally log.
 
-6. **`src/hooks/useFilters.ts`** -- Replace `supabase.from("user_filters")` with `supabase.functions.invoke("user-api", ...)`.
+**4. Cleanup: scheduled purge of old logs**
 
-7. **`src/hooks/useOnboarding.ts`** -- Replace direct table query with `user-api` call.
+Add a database function to delete logs older than 30 days:
+```sql
+CREATE OR REPLACE FUNCTION purge_old_latency_logs()
+RETURNS void LANGUAGE sql AS $$
+  DELETE FROM api_latency_logs WHERE created_at < now() - interval '30 days';
+$$;
+```
+This can be called from the existing scheduled stats job or manually from admin.
 
-8. **`src/hooks/useAdminCheck.ts`** -- Replace direct role query with `user-api/check_admin`.
+**5. New admin-api actions for latency data**
 
-9. **`src/pages/Admin.tsx`** -- Replace direct stats queries with `admin-api` calls.
+- `get_latency_stats`: Returns aggregated p50/p95/p99/avg/count per function+action for a given date range, computed via SQL percentile functions.
+- `get_latency_timeseries`: Returns hourly or daily aggregated latency (avg, p95) for charting.
 
-10. **`src/hooks/useWeeklyReports.ts`** -- Replace `supabase.from("weekly_reports")` with `user-api/get_weekly_reports`.
+**6. Admin dashboard: new latency section in `src/pages/Admin.tsx`**
 
-### What Stays the Same
-- All component code (no UI changes)
-- Time simulation logic (client-side `useMemo`)
-- CSV export/import parsing (client-side, but insert goes through `todos-api`)
-- Auth login/logout (managed by auth SDK)
-- Existing `generate-weekly-report` and `compute-stats` functions (unchanged)
+- A new card section below the existing charts
+- Table showing per-function/action: call count, avg, p50, p95, p99 (for the selected date range)
+- Line chart showing p95 latency over time (hourly or daily granularity)
+- Reuses the existing date range picker already in the admin page
 
-### Security Model
-- Each function validates the JWT via `getClaims()` to extract `userId`
-- Uses service role client internally, but scopes every query with `user_id = userId`
-- Admin endpoints additionally check the `user_roles` table
-- Image upload validates magic bytes and file size server-side (same checks moved from client)
+### Sampling Strategy
 
-### Trade-offs
+- Rate: 20% of requests logged (configurable constant in each function)
+- Uses `Math.random() < 0.2` check after computing duration
+- All timing is measured, but only sampled entries are persisted
+- This keeps the table small (~hundreds of rows/day) while giving statistically meaningful data
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Schema visibility | Table/column names in Network tab | Only function names + JSON |
-| Latency | 1 hop (browser to DB) | 2 hops (browser to function to DB) |
-| Code complexity | Simple hooks | More backend code, simpler hooks |
-| Flexibility | RLS only | Can add rate limiting, logging, validation |
-| Image upload | Direct to storage | Proxied as base64 (~33% overhead) |
+### What This Measures
+
+- Full server-side request duration: from receiving the request to sending the response
+- Includes: JWT validation, database queries, storage operations
+- Excludes: network transit time (client to function and back)
+- Broken down by function name and action for granular analysis
 
 ### Technical Notes
-- Edge functions use `createClient` with service role key, scoped by `userId` from JWT
-- Standard CORS headers on all functions
-- Image upload sends file as base64 in JSON body; function decodes and stores
-- Batch operations (delete, insert) maintain 500-per-batch pattern server-side
-- Error responses use consistent `{ error: string }` format with HTTP status codes
-- Existing RPC functions (`search_archived_todos`, `count_archived_todos`) called from within `todos-api`
+
+- `performance.now()` is available in Deno and provides sub-millisecond precision
+- Fire-and-forget logging (no await on the INSERT) ensures zero added latency to responses
+- The percentile queries use Postgres `percentile_cont` for accurate stats
+- 30-day retention keeps the table bounded
+- Service role access only -- no RLS policies needed for public access
 
