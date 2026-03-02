@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const SAMPLE_RATE = 0.2;
+const FUNCTION_NAME = "user-api";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -31,12 +34,32 @@ async function authenticate(req: Request) {
   return { userId: data.claims.sub as string, db: serviceClient };
 }
 
+function logLatency(db: ReturnType<typeof createClient>, action: string, durationMs: number, statusCode: number, userId?: string) {
+  if (Math.random() >= SAMPLE_RATE) return;
+  db.from("api_latency_logs").insert({
+    function_name: FUNCTION_NAME,
+    action,
+    duration_ms: Math.round(durationMs),
+    status_code: statusCode,
+    user_id: userId,
+  }).then();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const t0 = performance.now();
+  let action = "unknown";
+  let userId: string | undefined;
 
   try {
-    const { userId, db } = await authenticate(req);
-    const { action, ...params } = await req.json();
+    const auth = await authenticate(req);
+    userId = auth.userId;
+    const { db } = auth;
+    const body = await req.json();
+    action = body.action;
+    const params = body;
+
+    let resp: Response;
 
     switch (action) {
       case "get_filters": {
@@ -46,7 +69,8 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .maybeSingle();
         if (error) throw error;
-        return json(data ?? { show_overdue: false, selected_tags: [] });
+        resp = json(data ?? { show_overdue: false, selected_tags: [] });
+        break;
       }
 
       case "upsert_filters": {
@@ -55,7 +79,8 @@ Deno.serve(async (req) => {
           .from("user_filters")
           .upsert({ user_id: userId, show_overdue, selected_tags }, { onConflict: "user_id" });
         if (error) throw error;
-        return json({ success: true });
+        resp = json({ success: true });
+        break;
       }
 
       case "get_onboarding": {
@@ -65,9 +90,9 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .maybeSingle();
         if (error) throw error;
-        // No row = not completed
         const showOnboarding = !data ? true : !data.onboarding_completed;
-        return json({ showOnboarding });
+        resp = json({ showOnboarding });
+        break;
       }
 
       case "complete_onboarding": {
@@ -75,7 +100,8 @@ Deno.serve(async (req) => {
           .from("user_preferences")
           .upsert({ user_id: userId, onboarding_completed: true }, { onConflict: "user_id" });
         if (error) throw error;
-        return json({ success: true });
+        resp = json({ success: true });
+        break;
       }
 
       case "check_admin": {
@@ -85,7 +111,8 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .eq("role", "admin")
           .maybeSingle();
-        return json({ isAdmin: !!data });
+        resp = json({ isAdmin: !!data });
+        break;
       }
 
       case "get_weekly_reports": {
@@ -96,7 +123,8 @@ Deno.serve(async (req) => {
           .order("week_start", { ascending: false })
           .limit(12);
         if (error) throw error;
-        return json(data ?? []);
+        resp = json(data ?? []);
+        break;
       }
 
       case "get_language": {
@@ -106,7 +134,8 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .maybeSingle();
         if (error) throw error;
-        return json({ language: data?.language ?? "en" });
+        resp = json({ language: data?.language ?? "en" });
+        break;
       }
 
       case "set_language": {
@@ -115,14 +144,24 @@ Deno.serve(async (req) => {
           .from("user_preferences")
           .upsert({ user_id: userId, language }, { onConflict: "user_id" });
         if (error) throw error;
-        return json({ success: true });
+        resp = json({ success: true });
+        break;
       }
 
       default:
-        return json({ error: `Unknown action: ${action}` }, 400);
+        resp = json({ error: `Unknown action: ${action}` }, 400);
+        logLatency(db, action, performance.now() - t0, 400, userId);
+        return resp;
     }
+
+    logLatency(db, action, performance.now() - t0, 200, userId);
+    return resp;
   } catch (e: any) {
     const status = e.status || 500;
+    try {
+      const sc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      logLatency(sc, action, performance.now() - t0, status, userId);
+    } catch {}
     return json({ error: e.message || "Internal error" }, status);
   }
 });

@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decode as base64Decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
+const SAMPLE_RATE = 0.2;
+const FUNCTION_NAME = "images-api";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -32,34 +35,50 @@ async function authenticate(req: Request) {
   return { userId: data.claims.sub as string, db: serviceClient };
 }
 
+function logLatency(db: ReturnType<typeof createClient>, action: string, durationMs: number, statusCode: number, userId?: string) {
+  if (Math.random() >= SAMPLE_RATE) return;
+  db.from("api_latency_logs").insert({
+    function_name: FUNCTION_NAME,
+    action,
+    duration_ms: Math.round(durationMs),
+    status_code: statusCode,
+    user_id: userId,
+  }).then();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const t0 = performance.now();
+  let action = "unknown";
+  let userId: string | undefined;
 
   try {
-    const { userId, db } = await authenticate(req);
-    const { action, ...params } = await req.json();
+    const auth = await authenticate(req);
+    userId = auth.userId;
+    const { db } = auth;
+    const body = await req.json();
+    action = body.action;
+    const params = body;
+
+    let resp: Response;
 
     switch (action) {
       case "upload": {
         const { todoId, fileBase64, fileName, contentType } = params;
-
-        // Decode and validate
         const bytes = base64Decode(fileBase64);
         const MAX_SIZE = 10 * 1024 * 1024;
-        if (bytes.length > MAX_SIZE) return json({ error: "File too large. Maximum size is 10MB." }, 400);
+        if (bytes.length > MAX_SIZE) { resp = json({ error: "File too large. Maximum size is 10MB." }, 400); break; }
 
-        // Validate magic bytes
         const isValidImage =
           (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) ||
           (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) ||
           (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) ||
           (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
            bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50);
-        if (!isValidImage) return json({ error: "Invalid image file. Only JPEG, PNG, GIF, and WebP are allowed." }, 400);
+        if (!isValidImage) { resp = json({ error: "Invalid image file. Only JPEG, PNG, GIF, and WebP are allowed." }, 400); break; }
 
-        // Verify todo belongs to user
         const { data: todo } = await db.from("todos").select("id").eq("id", todoId).eq("user_id", userId).maybeSingle();
-        if (!todo) return json({ error: "Todo not found" }, 404);
+        if (!todo) { resp = json({ error: "Todo not found" }, 404); break; }
 
         const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/\.{2,}/g, ".");
         const path = `${userId}/${todoId}/${Date.now()}-${safeName}`;
@@ -76,7 +95,8 @@ Deno.serve(async (req) => {
         });
         if (dbError) throw dbError;
 
-        return json({ success: true });
+        resp = json({ success: true });
+        break;
       }
 
       case "delete": {
@@ -84,7 +104,8 @@ Deno.serve(async (req) => {
         await db.storage.from("todo-images").remove([storagePath]);
         const { error } = await db.from("todo_images").delete().eq("id", id);
         if (error) throw error;
-        return json({ success: true });
+        resp = json({ success: true });
+        break;
       }
 
       case "get_url": {
@@ -93,14 +114,24 @@ Deno.serve(async (req) => {
           .from("todo-images")
           .createSignedUrl(storagePath, 3600);
         if (error) throw error;
-        return json({ signedUrl: data.signedUrl });
+        resp = json({ signedUrl: data.signedUrl });
+        break;
       }
 
       default:
-        return json({ error: `Unknown action: ${action}` }, 400);
+        resp = json({ error: `Unknown action: ${action}` }, 400);
+        logLatency(db, action, performance.now() - t0, 400, userId);
+        return resp;
     }
+
+    logLatency(db, action, performance.now() - t0, 200, userId);
+    return resp;
   } catch (e: any) {
     const status = e.status || 500;
+    try {
+      const sc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      logLatency(sc, action, performance.now() - t0, status, userId);
+    } catch {}
     return json({ error: e.message || "Internal error" }, status);
   }
 });

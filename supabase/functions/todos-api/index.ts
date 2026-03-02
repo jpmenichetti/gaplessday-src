@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const SAMPLE_RATE = 0.2;
+const FUNCTION_NAME = "todos-api";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -31,12 +34,31 @@ async function authenticate(req: Request) {
   return { userId: data.claims.sub as string, db: serviceClient };
 }
 
+function logLatency(db: ReturnType<typeof createClient>, action: string, durationMs: number, statusCode: number, userId?: string) {
+  if (Math.random() >= SAMPLE_RATE) return;
+  db.from("api_latency_logs").insert({
+    function_name: FUNCTION_NAME,
+    action,
+    duration_ms: Math.round(durationMs),
+    status_code: statusCode,
+    user_id: userId,
+  }).then();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const t0 = performance.now();
+  let action = "unknown";
+  let userId: string | undefined;
+  let statusCode = 200;
 
   try {
-    const { userId, db } = await authenticate(req);
-    const { action, ...params } = await req.json();
+    const auth = await authenticate(req);
+    userId = auth.userId;
+    const { db } = auth;
+    const body = await req.json();
+    action = body.action;
+    const params = body;
 
     switch (action) {
       case "list": {
@@ -55,9 +77,11 @@ Deno.serve(async (req) => {
           images = data || [];
         }
 
-        return json(
+        const resp = json(
           todos.map((t: any) => ({ ...t, images: images.filter((img: any) => img.todo_id === t.id) }))
         );
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "list_archived": {
@@ -69,7 +93,9 @@ Deno.serve(async (req) => {
             page_offset: pageOffset,
           });
           if (error) throw error;
-          return json(data ?? []);
+          const resp = json(data ?? []);
+          logLatency(db, action, performance.now() - t0, 200, userId);
+          return resp;
         }
         const from = pageOffset;
         const to = from + pageSize - 1;
@@ -81,7 +107,9 @@ Deno.serve(async (req) => {
           .order("removed_at", { ascending: false })
           .range(from, to);
         if (error) throw error;
-        return json(data ?? []);
+        const resp = json(data ?? []);
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "count_archived": {
@@ -89,7 +117,9 @@ Deno.serve(async (req) => {
         if (searchText) {
           const { data, error } = await db.rpc("count_archived_todos", { search_term: searchText });
           if (error) throw error;
-          return json({ count: data ?? 0 });
+          const resp = json({ count: data ?? 0 });
+          logLatency(db, action, performance.now() - t0, 200, userId);
+          return resp;
         }
         const { count, error } = await db
           .from("todos")
@@ -97,21 +127,27 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .eq("removed", true);
         if (error) throw error;
-        return json({ count: count ?? 0 });
+        const resp = json({ count: count ?? 0 });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "add": {
         const { text, category } = params;
         const { error } = await db.from("todos").insert({ text, category, user_id: userId });
         if (error) throw error;
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "update": {
-        const { id, ...updates } = params;
+        const { id, action: _a, ...updates } = params;
         const { error } = await db.from("todos").update(updates).eq("id", id).eq("user_id", userId);
         if (error) throw error;
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "toggle_complete": {
@@ -122,7 +158,9 @@ Deno.serve(async (req) => {
           .eq("id", id)
           .eq("user_id", userId);
         if (error) throw error;
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "remove": {
@@ -133,7 +171,9 @@ Deno.serve(async (req) => {
           .eq("id", id)
           .eq("user_id", userId);
         if (error) throw error;
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "restore": {
@@ -144,7 +184,9 @@ Deno.serve(async (req) => {
           .eq("id", id)
           .eq("user_id", userId);
         if (error) throw error;
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "delete_permanent": {
@@ -154,13 +196,17 @@ Deno.serve(async (req) => {
           const { error } = await db.from("todos").delete().in("id", batch).eq("user_id", userId);
           if (error) throw error;
         }
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "delete_all": {
         const { error } = await db.from("todos").delete().eq("user_id", userId);
         if (error) throw error;
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "bulk_insert": {
@@ -171,7 +217,9 @@ Deno.serve(async (req) => {
           const { error } = await db.from("todos").insert(batch);
           if (error) throw error;
         }
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "archive_completed": {
@@ -186,7 +234,9 @@ Deno.serve(async (req) => {
             .eq("user_id", userId);
           if (error) throw error;
         }
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       case "auto_transitions": {
@@ -202,14 +252,24 @@ Deno.serve(async (req) => {
             await db.from("todos").update({ category: "this_week", created_at: now }).eq("id", id).eq("user_id", userId);
           }
         }
-        return json({ success: true });
+        const resp = json({ success: true });
+        logLatency(db, action, performance.now() - t0, 200, userId);
+        return resp;
       }
 
       default:
-        return json({ error: `Unknown action: ${action}` }, 400);
+        statusCode = 400;
+        const resp = json({ error: `Unknown action: ${action}` }, 400);
+        logLatency(db, action, performance.now() - t0, 400, userId);
+        return resp;
     }
   } catch (e: any) {
-    const status = e.status || 500;
-    return json({ error: e.message || "Internal error" }, status);
+    statusCode = e.status || 500;
+    // Try to log even on error (need a service client)
+    try {
+      const sc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      logLatency(sc, action, performance.now() - t0, statusCode, userId);
+    } catch {}
+    return json({ error: e.message || "Internal error" }, statusCode);
   }
 });

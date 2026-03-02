@@ -74,6 +74,36 @@ export type Database = {
         }
         Relationships: []
       }
+      api_latency_logs: {
+        Row: {
+          action: string
+          created_at: string
+          duration_ms: number
+          function_name: string
+          id: string
+          status_code: number
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          duration_ms: number
+          function_name: string
+          id?: string
+          status_code?: number
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          duration_ms?: number
+          function_name?: string
+          id?: string
+          status_code?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       todo_images: {
         Row: {
           file_name: string
@@ -270,6 +300,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      purge_old_latency_logs: { Args: never; Returns: undefined }
       search_archived_todos: {
         Args: { page_offset: number; page_size: number; search_term: string }
         Returns: {
