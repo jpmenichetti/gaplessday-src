@@ -293,6 +293,28 @@ export type Database = {
     Functions: {
       compute_admin_stats: { Args: never; Returns: undefined }
       count_archived_todos: { Args: { search_term: string }; Returns: number }
+      get_latency_stats: {
+        Args: { p_date_from: string; p_date_to: string }
+        Returns: {
+          action: string
+          avg_ms: number
+          call_count: number
+          function_name: string
+          p50_ms: number
+          p95_ms: number
+          p99_ms: number
+        }[]
+      }
+      get_latency_timeseries: {
+        Args: { p_date_from: string; p_date_to: string; p_granularity?: string }
+        Returns: {
+          avg_ms: number
+          bucket: string
+          call_count: number
+          function_name: string
+          p95_ms: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
