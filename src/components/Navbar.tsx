@@ -2,8 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useTodos } from "@/hooks/useTodos";
-// user_roles check now goes through user-api edge function
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -31,11 +29,11 @@ import { useI18n } from "@/i18n/I18nContext";
 import { exportTodosCsv } from "@/lib/exportCsv";
 import { validateCsvFile, importCsvFile } from "@/lib/importCsv";
 import { toast } from "@/hooks/use-toast";
+import type { Todo } from "@/hooks/useTodos";
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const { t } = useI18n();
-  const { todos, archived, deleteAllTodos, bulkInsertTodos } = useTodos();
   const [isAdmin, setIsAdmin] = useState(false);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -49,10 +47,19 @@ export default function Navbar() {
       .then(({ data, error }) => setIsAdmin(!error && !!data?.isAdmin));
   }, [user]);
 
-  const handleExport = () => {
-    const allTodos = [...(todos || []), ...(archived || [])];
-    exportTodosCsv(allTodos);
-    toast({ title: t("backup.exportSuccess") });
+  const handleExport = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("todos-api", { body: { action: "list" } });
+      if (error) throw error;
+      const { data: archivedData } = await supabase.functions.invoke("todos-api", {
+        body: { action: "list_archived", searchText: "", pageSize: 10000, pageOffset: 0 },
+      });
+      const allTodos = [...(data || []), ...(archivedData || [])] as Todo[];
+      exportTodosCsv(allTodos);
+      toast({ title: t("backup.exportSuccess") });
+    } catch {
+      toast({ title: "Export failed", variant: "destructive" });
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,13 +85,15 @@ export default function Navbar() {
         toast({ title: t("backup.noValidRows"), variant: "destructive" });
         return;
       }
-      await deleteAllTodos.mutateAsync();
-      await bulkInsertTodos.mutateAsync(validTodos);
+      await supabase.functions.invoke("todos-api", { body: { action: "delete_all" } });
+      await supabase.functions.invoke("todos-api", { body: { action: "bulk_insert", todos: validTodos } });
       let msg = t("backup.restoreSuccess").replace("{count}", String(validTodos.length));
       if (skippedCount > 0) {
         msg += ` ${t("backup.skippedRows").replace("{count}", String(skippedCount))}`;
       }
       toast({ title: msg });
+      // Force refresh of todo data
+      window.location.reload();
     } catch (err: any) {
       toast({ title: err.message || t("backup.restoreError"), variant: "destructive" });
     } finally {
