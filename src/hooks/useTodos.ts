@@ -149,7 +149,7 @@ export function useTodos(searchText = "") {
         removed_at: null,
         user_id: user?.id ?? "",
       };
-      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) => [...(old ?? []), tempTodo]);
+      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) => [tempTodo, ...(old ?? [])]);
       console.timeEnd("[addTodo] onMutate total");
       return { previous };
     },
