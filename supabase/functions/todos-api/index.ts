@@ -87,13 +87,25 @@ Deno.serve(async (req) => {
       case "list_archived": {
         const { searchText, pageSize, pageOffset } = params;
         if (searchText) {
-          const { data, error } = await db.rpc("search_archived_todos", {
-            search_term: searchText,
-            page_size: pageSize,
-            page_offset: pageOffset,
-          });
+          const term = String(searchText).trim().toLowerCase();
+          const { data, error } = await db
+            .from("todos")
+            .select("*")
+            .eq("user_id", userId)
+            .eq("removed", true)
+            .order("removed_at", { ascending: false });
           if (error) throw error;
-          const resp = json(data ?? []);
+
+          const matched = (data ?? []).filter((todo: any) => {
+            const text = String(todo.text ?? "").toLowerCase();
+            const notes = String(todo.notes ?? "").toLowerCase();
+            const urls = Array.isArray(todo.urls) ? todo.urls.join(" ").toLowerCase() : "";
+            return text.includes(term) || notes.includes(term) || urls.includes(term);
+          });
+
+          const start = Number(pageOffset) || 0;
+          const size = Number(pageSize) || 20;
+          const resp = json(matched.slice(start, start + size));
           logLatency(db, action, performance.now() - t0, 200, userId);
           return resp;
         }
@@ -115,9 +127,22 @@ Deno.serve(async (req) => {
       case "count_archived": {
         const { searchText } = params;
         if (searchText) {
-          const { data, error } = await db.rpc("count_archived_todos", { search_term: searchText });
+          const term = String(searchText).trim().toLowerCase();
+          const { data, error } = await db
+            .from("todos")
+            .select("text, notes, urls")
+            .eq("user_id", userId)
+            .eq("removed", true);
           if (error) throw error;
-          const resp = json({ count: data ?? 0 });
+
+          const count = (data ?? []).filter((todo: any) => {
+            const text = String(todo.text ?? "").toLowerCase();
+            const notes = String(todo.notes ?? "").toLowerCase();
+            const urls = Array.isArray(todo.urls) ? todo.urls.join(" ").toLowerCase() : "";
+            return text.includes(term) || notes.includes(term) || urls.includes(term);
+          }).length;
+
+          const resp = json({ count });
           logLatency(db, action, performance.now() - t0, 200, userId);
           return resp;
         }
