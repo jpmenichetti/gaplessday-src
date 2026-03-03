@@ -183,7 +183,7 @@ const Index = () => {
               onLoadMore={() => fetchNextArchivedPage()}
               hasMore={hasNextArchivedPage}
               isLoadingMore={isFetchingNextArchivedPage}
-              autoOpen={!!debouncedSearchText && archived.length > 0}
+              autoOpen={!!debouncedSearchText && archivedCount > 0}
             />
           </>
         )}

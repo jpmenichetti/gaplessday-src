@@ -64,7 +64,8 @@ export default function ArchiveSection({ todos, totalCount, onOpen, onRestore, o
   };
   const [deleteTarget, setDeleteTarget] = useState<{ type: "single"; id: string } | { type: "period"; label: string; ids: string[] } | null>(null);
 
-  if (todos.length === 0) return null;
+  const visibleCount = totalCount ?? todos.length;
+  if (visibleCount === 0) return null;
 
   const handleDeleteSingle = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
