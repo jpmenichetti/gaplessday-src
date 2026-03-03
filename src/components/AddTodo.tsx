@@ -25,7 +25,9 @@ export default function AddTodo({ category, onAdd, isPending }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
+    console.time("[AddTodo] submit→mutate");
     onAdd(text.trim(), category);
+    console.timeEnd("[AddTodo] submit→mutate");
     setText("");
   };
 

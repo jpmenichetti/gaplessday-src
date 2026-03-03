@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Todo, TodoCategory, CATEGORY_CONFIG, isOverdue } from "@/hooks/useTodos";
 import { useSimulatedTime } from "@/hooks/useSimulatedTime";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +19,7 @@ type Props = {
   readOnly?: boolean;
 };
 
-export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }: Props) {
+const TodoCard = memo(function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }: Props) {
   const { getNow } = useSimulatedTime();
   const overdue = isOverdue(todo, getNow());
   const config = CATEGORY_CONFIG[todo.category as TodoCategory];
@@ -104,4 +105,6 @@ export default function TodoCard({ todo, onToggle, onRemove, onOpen, readOnly }:
       </div>
     </div>
   );
-}
+});
+
+export default TodoCard;
