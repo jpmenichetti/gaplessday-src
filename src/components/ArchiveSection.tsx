@@ -1,7 +1,7 @@
 import { Todo, CATEGORY_CONFIG, TodoCategory } from "@/hooks/useTodos";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Archive, ChevronDown, RotateCcw, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,11 +40,28 @@ type Props = {
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  autoOpen?: boolean;
 };
 
-export default function ArchiveSection({ todos, totalCount, onOpen, onRestore, onPermanentDelete, onLoadMore, hasMore, isLoadingMore }: Props) {
+export default function ArchiveSection({ todos, totalCount, onOpen, onRestore, onPermanentDelete, onLoadMore, hasMore, isLoadingMore, autoOpen }: Props) {
   const [open, setOpen] = useState(false);
+  const manualToggleRef = useRef(false);
   const { t } = useI18n();
+
+  useEffect(() => {
+    if (autoOpen && !manualToggleRef.current) {
+      setOpen(true);
+    }
+    if (!autoOpen) {
+      if (!manualToggleRef.current) setOpen(false);
+      manualToggleRef.current = false;
+    }
+  }, [autoOpen]);
+
+  const handleOpenChange = (value: boolean) => {
+    manualToggleRef.current = true;
+    setOpen(value);
+  };
   const [deleteTarget, setDeleteTarget] = useState<{ type: "single"; id: string } | { type: "period"; label: string; ids: string[] } | null>(null);
 
   if (todos.length === 0) return null;
@@ -109,7 +126,7 @@ export default function ArchiveSection({ todos, totalCount, onOpen, onRestore, o
 
   return (
     <>
-      <Collapsible open={open} onOpenChange={setOpen} className="rounded-xl border bg-muted/50 p-4">
+      <Collapsible open={open} onOpenChange={handleOpenChange} className="rounded-xl border bg-muted/50 p-4">
         <CollapsibleTrigger className="flex w-full items-center justify-between">
           <div className="flex items-center gap-2">
             <Archive className="h-5 w-5 text-muted-foreground" />
