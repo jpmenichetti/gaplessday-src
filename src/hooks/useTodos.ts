@@ -131,6 +131,7 @@ export function useTodos(searchText = "") {
       await invoke("todos-api", { action: "add", text, category });
     },
     onMutate: async ({ text, category }) => {
+      console.time("[addTodo] onMutate total");
       await queryClient.cancelQueries({ queryKey: ["todos"] });
       const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
       const tempTodo: Todo = {
@@ -149,6 +150,7 @@ export function useTodos(searchText = "") {
         user_id: user?.id ?? "",
       };
       queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) => [...(old ?? []), tempTodo]);
+      console.timeEnd("[addTodo] onMutate total");
       return { previous };
     },
     onError: (_err, _vars, context) => {

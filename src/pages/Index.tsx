@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTodos, Todo, TodoCategory, isOverdue } from "@/hooks/useTodos";
 import { useI18n } from "@/i18n/I18nContext";
@@ -58,6 +58,23 @@ const Index = () => {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
+  const openTodo = useCallback((todo: Todo, readOnly = false) => {
+    setSelectedTodo(todo);
+    setDialogReadOnly(readOnly);
+  }, []);
+
+  const handleAdd = useCallback((text: string, category: TodoCategory) => {
+    addTodo.mutate({ text, category });
+  }, [addTodo]);
+
+  const handleToggle = useCallback((id: string, completed: boolean) => {
+    toggleComplete.mutate({ id, completed });
+  }, [toggleComplete]);
+
+  const handleRemove = useCallback((id: string) => {
+    removeTodo.mutate(id);
+  }, [removeTodo]);
+
   const handleDragStart = (event: DragStartEvent) => {
     const todo = todos.find((t) => t.id === event.active.id);
     setActiveDragTodo(todo || null);
@@ -88,11 +105,6 @@ const Index = () => {
   }
 
   if (!user) return <LoginPage />;
-
-  const openTodo = (todo: Todo, readOnly = false) => {
-    setSelectedTodo(todo);
-    setDialogReadOnly(readOnly);
-  };
 
   // Keep selected todo in sync with latest data
   const liveTodo = selectedTodo
@@ -150,10 +162,10 @@ const Index = () => {
                     key={cat}
                     category={cat}
                     todos={filteredTodos}
-                    onAdd={(text, category) => addTodo.mutate({ text, category })}
-                    onToggle={(id, completed) => toggleComplete.mutate({ id, completed })}
-                    onRemove={(id) => removeTodo.mutate(id)}
-                    onOpen={(todo) => openTodo(todo)}
+                    onAdd={handleAdd}
+                    onToggle={handleToggle}
+                    onRemove={handleRemove}
+                    onOpen={openTodo}
                     isAdding={addTodo.isPending}
                   />
                 ))}
