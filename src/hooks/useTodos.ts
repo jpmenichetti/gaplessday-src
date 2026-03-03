@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useSimulatedTime } from "./useSimulatedTime";
 import { Tables } from "@/integrations/supabase/types";
+import { toast } from "sonner";
 
 export type Todo = Tables<"todos"> & { images?: Tables<"todo_images">[] };
 export type TodoCategory = "today" | "this_week" | "next_week" | "others";
@@ -129,33 +130,95 @@ export function useTodos(searchText = "") {
     mutationFn: async ({ text, category }: { text: string; category: TodoCategory }) => {
       await invoke("todos-api", { action: "add", text, category });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
+    onMutate: async ({ text, category }) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
+      const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
+      const tempTodo: Todo = {
+        id: crypto.randomUUID(),
+        text,
+        category,
+        completed: false,
+        completed_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        notes: null,
+        tags: null,
+        urls: null,
+        removed: false,
+        removed_at: null,
+        user_id: user?.id ?? "",
+      };
+      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) => [...(old ?? []), tempTodo]);
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["todos", user?.id], context?.previous);
+      toast.error("Failed to add todo");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const updateTodo = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Tables<"todos">> & { id: string }) => {
       await invoke("todos-api", { action: "update", id, ...updates });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
+    onMutate: async ({ id, ...updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
+      const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
+      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) =>
+        (old ?? []).map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t))
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["todos", user?.id], context?.previous);
+      toast.error("Failed to update todo");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const toggleComplete = useMutation({
     mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
       await invoke("todos-api", { action: "toggle_complete", id, completed });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
+    onMutate: async ({ id, completed }) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
+      const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
+      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) =>
+        (old ?? []).map((t) =>
+          t.id === id ? { ...t, completed, completed_at: completed ? new Date().toISOString() : null } : t
+        )
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["todos", user?.id], context?.previous);
+      toast.error("Failed to toggle todo");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
   const removeTodo = useMutation({
     mutationFn: async (id: string) => {
       await invoke("todos-api", { action: "remove", id });
     },
-    onSuccess: invalidateAll,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
+      const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
+      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) =>
+        (old ?? []).filter((t) => t.id !== id)
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["todos", user?.id], context?.previous);
+      toast.error("Failed to remove todo");
+    },
+    onSettled: invalidateAll,
   });
 
   const uploadImage = useMutation({
     mutationFn: async ({ todoId, file }: { todoId: string; file: File }) => {
-      // Convert file to base64
       const arrayBuffer = await file.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
       let binary = "";
@@ -186,7 +249,18 @@ export function useTodos(searchText = "") {
     mutationFn: async (id: string) => {
       await invoke("todos-api", { action: "restore", id });
     },
-    onSuccess: invalidateAll,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
+      await queryClient.cancelQueries({ queryKey: ["archived-todos"] });
+      const previousArchived = queryClient.getQueryData(["archived-todos", user?.id, ""]);
+      // We can't easily move to active cache without full data, just invalidate on settle
+      return { previousArchived };
+    },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["archived-todos", user?.id, ""], context?.previousArchived);
+      toast.error("Failed to restore todo");
+    },
+    onSettled: invalidateAll,
   });
 
   const permanentlyDeleteTodos = useMutation({
@@ -269,7 +343,19 @@ export function useTodos(searchText = "") {
     mutationFn: async (ids: string[]) => {
       await invoke("todos-api", { action: "archive_completed", ids });
     },
-    onSuccess: invalidateAll,
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
+      const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
+      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) =>
+        (old ?? []).filter((t) => !ids.includes(t.id))
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["todos", user?.id], context?.previous);
+      toast.error("Failed to archive todos");
+    },
+    onSettled: invalidateAll,
   });
 
   return {
