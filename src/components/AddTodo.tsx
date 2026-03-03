@@ -25,9 +25,7 @@ export default function AddTodo({ category, onAdd, isPending }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
-    console.time("[AddTodo] submit→mutate");
     onAdd(text.trim(), category);
-    console.timeEnd("[AddTodo] submit→mutate");
     setText("");
   };
 
@@ -38,12 +36,11 @@ export default function AddTodo({ category, onAdd, isPending }: Props) {
         onChange={(e) => setText(e.target.value)}
         placeholder={t("addTodo.placeholder", { category: t(CATEGORY_LABEL_KEYS[category]) })}
         className="flex-1"
-        disabled={isPending}
       />
       <Button
         type="submit"
         size="icon"
-        disabled={!text.trim() || isPending}
+        disabled={!text.trim()}
         className="shrink-0"
         style={{ backgroundColor: `hsl(var(--category-${category === "this_week" ? "week" : category === "next_week" ? "next" : category}))` }}
       >
