@@ -415,9 +415,6 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                 </div>
               )}
             </div>
-          </div>
-        </div>
-            </div>
 
             {/* Move to */}
             {!readOnly && (
@@ -445,6 +442,9 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
 
       {/* Image preview dialog */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
