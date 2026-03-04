@@ -36,6 +36,8 @@ export function useTodos(searchText = "") {
 
   // Track temp ID → real ID mappings for operations on freshly-created todos
   const idMapRef = useRef<Map<string, string>>(new Map());
+  const pendingCreateIdsRef = useRef<Set<string>>(new Set());
+  const pendingRemoveIdsRef = useRef<Set<string>>(new Set());
   const resolveId = useCallback((id: string) => idMapRef.current.get(id) ?? id, []);
 
   // Auto-archive completed todos based on lifecycle rules
@@ -136,6 +138,7 @@ export function useTodos(searchText = "") {
       return { tempId, realId: data.id as string };
     },
     onMutate: async ({ text, category, tempId }) => {
+      pendingCreateIdsRef.current.add(tempId);
       await queryClient.cancelQueries({ queryKey: ["todos"] });
       const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
       const tempTodo: Todo = {
@@ -156,21 +159,34 @@ export function useTodos(searchText = "") {
       queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) => [tempTodo, ...(old ?? [])]);
       return { previous };
     },
-    onSuccess: ({ tempId, realId }) => {
-      // Track the mapping so operations using tempId resolve to realId
+    onSuccess: async ({ tempId, realId }) => {
       idMapRef.current.set(tempId, realId);
-      // Replace temp ID with real server ID in the cache so detail panel works
+      pendingCreateIdsRef.current.delete(tempId);
+
+      if (pendingRemoveIdsRef.current.has(tempId)) {
+        pendingRemoveIdsRef.current.delete(tempId);
+        try {
+          await invoke("todos-api", { action: "remove", id: realId });
+        } catch {
+          toast.error("Failed to remove todo");
+        }
+        return;
+      }
+
       queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) =>
         (old ?? []).map((t) => (t.id === tempId ? { ...t, id: realId } : t))
       );
-      // Notify listeners about the ID swap
-      return { tempId, realId };
     },
-    onError: (_err, _vars, context) => {
+    onError: (_err, vars, context) => {
+      pendingCreateIdsRef.current.delete(vars.tempId);
+      pendingRemoveIdsRef.current.delete(vars.tempId);
       queryClient.setQueryData(["todos", user?.id], context?.previous);
       toast.error("Failed to add todo");
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
+    onSettled: (_data, _error, vars) => {
+      if (vars?.tempId) pendingCreateIdsRef.current.delete(vars.tempId);
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+    },
   });
 
   const updateTodo = useMutation({
@@ -217,8 +233,18 @@ export function useTodos(searchText = "") {
 
   const removeTodo = useMutation({
     mutationFn: async (id: string) => {
-      const realId = resolveId(id);
-      await invoke("todos-api", { action: "remove", id: realId });
+      const mappedId = idMapRef.current.get(id);
+      if (mappedId) {
+        await invoke("todos-api", { action: "remove", id: mappedId });
+        return;
+      }
+
+      if (pendingCreateIdsRef.current.has(id)) {
+        pendingRemoveIdsRef.current.add(id);
+        return;
+      }
+
+      await invoke("todos-api", { action: "remove", id });
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["todos"] });
