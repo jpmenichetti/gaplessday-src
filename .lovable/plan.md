@@ -1,22 +1,43 @@
 
 
-## Fix: Search results not visible in Archive section
-
-### Problem
-When searching for a keyword that matches an archived todo, the backend correctly returns the results, but the Archive collapsible section stays **closed by default**. The user has no indication that matching items exist in the archive.
-
-### Solution
-Auto-expand the Archive section when there is an active search query and archived results are available. Collapse it back when the search is cleared (unless the user manually opened it).
+## Add category move buttons to the detail panel
 
 ### Changes
 
-**`src/components/ArchiveSection.tsx`**
-- Accept a new prop `autoOpen?: boolean` (true when there's an active search with results)
-- Use `useEffect` to auto-open the collapsible when `autoOpen` becomes true
-- Track whether the user manually toggled the section to avoid fighting with user intent
+**`src/components/TodoDetailDialog.tsx`**
 
-**`src/pages/Index.tsx`**
-- Pass `autoOpen={!!debouncedSearchText && archived.length > 0}` to `ArchiveSection`
+Add a "Move to" section after the header (category badge + title), visible only when `!readOnly`. Render one button per category excluding the current one, stacked vertically in a column layout.
 
-This is a minimal two-file change. No backend modifications needed — the search RPC functions already work correctly.
+Each button:
+- Shows the category emoji + translated label
+- Uses `CATEGORY_CONFIG[cat].bgClass` and `colorClass` for styling
+- Full width (`w-full`) so it adapts to panel resizing and mobile
+- On click: `onUpdate(todo.id, { category: targetCategory, created_at: new Date().toISOString() })`
+
+Structure:
+```tsx
+{!readOnly && (
+  <div className="space-y-1.5">
+    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      {t("detail.moveTo") /* fallback: "Move to" */}
+    </label>
+    <div className="flex flex-col gap-1.5">
+      {(["today","this_week","next_week","others"] as TodoCategory[])
+        .filter(cat => cat !== todo.category)
+        .map(cat => (
+          <button key={cat} onClick={...} className="w-full text-left px-3 py-2 rounded-md text-sm font-medium {bgClass} {colorClass} hover:opacity-80 transition-opacity flex items-center gap-2">
+            <span>{emoji}</span>
+            <span>{translated label}</span>
+          </button>
+        ))}
+    </div>
+  </div>
+)}
+```
+
+Place this inside the `<div className="space-y-5">` block, as the first child (before Tags).
+
+**`src/i18n/translations.ts`**
+
+Add `"detail.moveTo"` key with translations (e.g., EN: "Move to", ES: "Mover a", etc.).
 
