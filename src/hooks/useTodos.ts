@@ -127,15 +127,15 @@ export function useTodos(searchText = "") {
   });
 
   const addTodo = useMutation({
-    mutationFn: async ({ text, category }: { text: string; category: TodoCategory }) => {
-      await invoke("todos-api", { action: "add", text, category });
+    mutationFn: async ({ text, category, tempId }: { text: string; category: TodoCategory; tempId: string }) => {
+      const data = await invoke("todos-api", { action: "add", text, category });
+      return { tempId, realId: data.id as string };
     },
-    onMutate: async ({ text, category }) => {
-      console.time("[addTodo] onMutate total");
+    onMutate: async ({ text, category, tempId }) => {
       await queryClient.cancelQueries({ queryKey: ["todos"] });
       const previous = queryClient.getQueryData<Todo[]>(["todos", user?.id]);
       const tempTodo: Todo = {
-        id: crypto.randomUUID(),
+        id: tempId,
         text,
         category,
         completed: false,
@@ -150,8 +150,15 @@ export function useTodos(searchText = "") {
         user_id: user?.id ?? "",
       };
       queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) => [tempTodo, ...(old ?? [])]);
-      console.timeEnd("[addTodo] onMutate total");
       return { previous };
+    },
+    onSuccess: ({ tempId, realId }) => {
+      // Replace temp ID with real server ID in the cache so detail panel works
+      queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) =>
+        (old ?? []).map((t) => (t.id === tempId ? { ...t, id: realId } : t))
+      );
+      // Notify listeners about the ID swap
+      return { tempId, realId };
     },
     onError: (_err, _vars, context) => {
       queryClient.setQueryData(["todos", user?.id], context?.previous);
