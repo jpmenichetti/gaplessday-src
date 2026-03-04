@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useSimulatedTime } from "./useSimulatedTime";
@@ -33,6 +33,10 @@ export function useTodos(searchText = "") {
     queryClient.invalidateQueries({ queryKey: ["archived-todos"] });
     queryClient.invalidateQueries({ queryKey: ["archived-todos-count"] });
   };
+
+  // Track temp ID → real ID mappings for operations on freshly-created todos
+  const idMapRef = useRef<Map<string, string>>(new Map());
+  const resolveId = useCallback((id: string) => idMapRef.current.get(id) ?? id, []);
 
   // Auto-archive completed todos based on lifecycle rules
   const autoArchiveMutation = useMutation({
@@ -153,6 +157,8 @@ export function useTodos(searchText = "") {
       return { previous };
     },
     onSuccess: ({ tempId, realId }) => {
+      // Track the mapping so operations using tempId resolve to realId
+      idMapRef.current.set(tempId, realId);
       // Replace temp ID with real server ID in the cache so detail panel works
       queryClient.setQueryData<Todo[]>(["todos", user?.id], (old) =>
         (old ?? []).map((t) => (t.id === tempId ? { ...t, id: realId } : t))
@@ -169,7 +175,8 @@ export function useTodos(searchText = "") {
 
   const updateTodo = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Tables<"todos">> & { id: string }) => {
-      await invoke("todos-api", { action: "update", id, ...updates });
+      const realId = resolveId(id);
+      await invoke("todos-api", { action: "update", id: realId, ...updates });
     },
     onMutate: async ({ id, ...updates }) => {
       await queryClient.cancelQueries({ queryKey: ["todos"] });
@@ -188,7 +195,8 @@ export function useTodos(searchText = "") {
 
   const toggleComplete = useMutation({
     mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
-      await invoke("todos-api", { action: "toggle_complete", id, completed });
+      const realId = resolveId(id);
+      await invoke("todos-api", { action: "toggle_complete", id: realId, completed });
     },
     onMutate: async ({ id, completed }) => {
       await queryClient.cancelQueries({ queryKey: ["todos"] });
@@ -209,7 +217,8 @@ export function useTodos(searchText = "") {
 
   const removeTodo = useMutation({
     mutationFn: async (id: string) => {
-      await invoke("todos-api", { action: "remove", id });
+      const realId = resolveId(id);
+      await invoke("todos-api", { action: "remove", id: realId });
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["todos"] });
