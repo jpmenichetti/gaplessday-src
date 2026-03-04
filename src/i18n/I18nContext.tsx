@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import translations, { Language, LANGUAGES } from "./translations";
+import translations, { Language, LANGUAGES } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 // Language preferences now go through user-api edge function
