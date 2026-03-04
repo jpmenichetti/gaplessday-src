@@ -282,6 +282,33 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
           </div>
 
           <div className="space-y-5">
+            {/* Move to */}
+            {!readOnly && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.moveTo")}</label>
+                <div className="flex flex-col gap-1.5">
+                  {(["today", "this_week", "next_week", "others"] as TodoCategory[])
+                    .filter((cat) => cat !== todo.category)
+                    .map((cat) => {
+                      const c = CATEGORY_CONFIG[cat];
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => onUpdate(todo.id, { category: cat, created_at: new Date().toISOString() })}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity",
+                            c.bgClass, c.colorClass
+                          )}
+                        >
+                          <span>{c.emoji}</span>
+                          <span>{t(CATEGORY_LABEL_KEYS[cat])}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
             {/* Tags */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.tags")}</label>

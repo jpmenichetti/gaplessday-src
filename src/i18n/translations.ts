@@ -52,6 +52,7 @@ const translations: Record<Language, Record<string, string>> = {
     "detail.addNotes": "Add additional notes...",
     "detail.uploadImage": "Upload Image",
     "detail.dropImage": "Drop image to upload",
+    "detail.moveTo": "Move to",
 
     // Archive
     "archive.title": "Archive",
@@ -178,6 +179,7 @@ const translations: Record<Language, Record<string, string>> = {
     "detail.addNotes": "Agregar notas adicionales...",
     "detail.uploadImage": "Subir imagen",
     "detail.dropImage": "Suelta la imagen para subir",
+    "detail.moveTo": "Mover a",
     "archive.title": "Archivo",
     "archive.created": "Creada",
     "archive.archived": "Archivada",
@@ -296,6 +298,7 @@ const translations: Record<Language, Record<string, string>> = {
     "detail.addNotes": "Ajouter des notes supplémentaires...",
     "detail.uploadImage": "Télécharger une image",
     "detail.dropImage": "Déposez l'image pour télécharger",
+    "detail.moveTo": "Déplacer vers",
     "archive.title": "Archive",
     "archive.created": "Créée",
     "archive.archived": "Archivée",
@@ -414,6 +417,7 @@ const translations: Record<Language, Record<string, string>> = {
     "detail.addNotes": "Zusätzliche Notizen hinzufügen...",
     "detail.uploadImage": "Bild hochladen",
     "detail.dropImage": "Bild zum Hochladen ablegen",
+    "detail.moveTo": "Verschieben nach",
     "archive.title": "Archiv",
     "archive.created": "Erstellt",
     "archive.archived": "Archiviert",
