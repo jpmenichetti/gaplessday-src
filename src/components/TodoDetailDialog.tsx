@@ -430,8 +430,8 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                           key={cat}
                           onClick={() => onUpdate(todo.id, { category: cat, created_at: new Date().toISOString() })}
                           className={cn(
-                            "w-full text-left px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity",
-                            c.bgClass, c.colorClass
+                            "w-full text-left px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors border bg-transparent hover:bg-accent/50",
+                            c.colorClass
                           )}
                         >
                           <span>{c.emoji}</span>
