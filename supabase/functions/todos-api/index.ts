@@ -159,9 +159,9 @@ Deno.serve(async (req) => {
 
       case "add": {
         const { text, category } = params;
-        const { error } = await db.from("todos").insert({ text, category, user_id: userId });
+        const { data: inserted, error } = await db.from("todos").insert({ text, category, user_id: userId }).select("id").single();
         if (error) throw error;
-        const resp = json({ success: true });
+        const resp = json({ success: true, id: inserted.id });
         logLatency(db, action, performance.now() - t0, 200, userId);
         return resp;
       }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTodos, Todo, TodoCategory, isOverdue } from "@/hooks/useTodos";
 import { useI18n } from "@/i18n/I18nContext";
@@ -64,7 +64,7 @@ const Index = () => {
   }, []);
 
   const handleAdd = useCallback((text: string, category: TodoCategory) => {
-    addTodo.mutate({ text, category });
+    addTodo.mutate({ text, category, tempId: crypto.randomUUID() });
   }, [addTodo]);
 
   const handleToggle = useCallback((id: string, completed: boolean) => {
@@ -96,6 +96,23 @@ const Index = () => {
     updateTodo.mutate({ id: todoId, ...updates } as any);
   };
 
+  // Keep selected todo in sync with latest data (handles temp→real ID swap)
+  const liveTodo = useMemo(() => {
+    if (!selectedTodo) return null;
+    return [...todos, ...archived].find((t) => t.id === selectedTodo.id) || selectedTodo;
+  }, [selectedTodo, todos, archived]);
+
+  // Sync selectedTodo ID when optimistic temp ID is replaced by real server ID
+  useEffect(() => {
+    if (!selectedTodo) return;
+    const match = todos.find(
+      (t) => t.id !== selectedTodo.id && t.text === selectedTodo.text && t.category === selectedTodo.category
+    );
+    if (match && !todos.find((t) => t.id === selectedTodo.id)) {
+      setSelectedTodo(match);
+    }
+  }, [todos, selectedTodo]);
+
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -105,11 +122,6 @@ const Index = () => {
   }
 
   if (!user) return <LoginPage />;
-
-  // Keep selected todo in sync with latest data
-  const liveTodo = selectedTodo
-    ? [...todos, ...archived].find((t) => t.id === selectedTodo.id) || selectedTodo
-    : null;
 
   return (
     <div className="min-h-screen bg-background">
