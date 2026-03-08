@@ -132,6 +132,7 @@ export default function LoginPage() {
             <img src={toolkasIcon} alt="Toolkas" className="h-4 w-4" />
             Created by <span className="font-semibold underline underline-offset-2">Toolkas</span>
           </a>
+          <span className="flex items-center gap-1.5">
             Built with <Heart className="h-4 w-4 text-destructive" /> using{" "}
             <a href="https://lovable.dev" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2 hover:text-foreground transition-colors">Lovable</a>
           </span>
