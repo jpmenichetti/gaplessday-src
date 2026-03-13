@@ -375,8 +375,12 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
               {!readOnly && (
                 <>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                  <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()}>
-                    <Upload className="h-3.5 w-3.5" /> {t("detail.uploadImage")}
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()} disabled={isUploading}>
+                    {isUploading ? (
+                      <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("detail.uploading") || "Uploading..."}</>
+                    ) : (
+                      <><Upload className="h-3.5 w-3.5" /> {t("detail.uploadImage")}</>
+                    )}
                   </Button>
                 </>
               )}
