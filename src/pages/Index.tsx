@@ -184,12 +184,13 @@ const Index = () => {
               </div>
               <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0" } } }) }}>
                 {activeDragTodo ? (
-                  <div className="opacity-80 rotate-2 scale-105">
+                  <div className="w-[340px] opacity-90 rotate-1 scale-[1.02]">
                     <TodoCard
                       todo={activeDragTodo}
                       onToggle={() => {}}
                       onRemove={() => {}}
                       onOpen={() => {}}
+                      readOnly
                     />
                   </div>
                 ) : null}
