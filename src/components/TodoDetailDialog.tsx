@@ -19,11 +19,27 @@ const CATEGORY_LABEL_KEYS: Record<TodoCategory, string> = {
   others: "category.others",
 };
 
+const signedUrlCache = new Map<string, { url: string; expiry: number }>();
+const CACHE_TTL = 50 * 60 * 1000; // 50 min (signed URLs last 60 min)
+
 function useSignedUrl(path: string) {
-  const [url, setUrl] = useState<string>("");
+  const [url, setUrl] = useState<string>(() => {
+    const cached = signedUrlCache.get(path);
+    return cached && cached.expiry > Date.now() ? cached.url : "";
+  });
   useEffect(() => {
+    const cached = signedUrlCache.get(path);
+    if (cached && cached.expiry > Date.now()) {
+      setUrl(cached.url);
+      return;
+    }
     let cancelled = false;
-    getImageUrl(path).then((u) => { if (!cancelled) setUrl(u); });
+    getImageUrl(path).then((u) => {
+      if (!cancelled) {
+        signedUrlCache.set(path, { url: u, expiry: Date.now() + CACHE_TTL });
+        setUrl(u);
+      }
+    });
     return () => { cancelled = true; };
   }, [path]);
   return url;
