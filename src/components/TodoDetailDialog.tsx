@@ -95,14 +95,32 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const isSavingNotes = useRef(false);
 
   const prevTodoId = useRef(todo?.id);
+  const prevImageCount = useRef(todo?.images?.length ?? 0);
   useEffect(() => {
     if (todo?.id !== prevTodoId.current) {
       setLocalNotes(todo?.notes || "");
       setLocalTitle(todo?.text || "");
       prevTodoId.current = todo?.id;
       isSavingNotes.current = false;
+      setPendingPreviews([]);
     }
   }, [todo?.id, todo?.notes]);
+
+  // Clear pending previews when server images update (new image arrived from refetch)
+  useEffect(() => {
+    const currentCount = todo?.images?.length ?? 0;
+    if (currentCount > prevImageCount.current && pendingPreviews.length > 0) {
+      setPendingPreviews((prev) => {
+        // Remove oldest preview(s) matching the number of new server images
+        const newImages = currentCount - prevImageCount.current;
+        const remaining = prev.slice(newImages);
+        // Revoke blob URLs for removed previews
+        prev.slice(0, newImages).forEach((p) => URL.revokeObjectURL(p.blobUrl));
+        return remaining;
+      });
+    }
+    prevImageCount.current = currentCount;
+  }, [todo?.images?.length]);
 
   const debouncedUpdateNotes = useCallback((id: string, value: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
