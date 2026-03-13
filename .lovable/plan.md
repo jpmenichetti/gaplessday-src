@@ -1,20 +1,27 @@
 
 
-## Fix Snyk Vulnerabilities
+## Make OwlDone installable as a PWA
+
+### What this does
+Adds a service worker and enhances the manifest so users can "install" the app from their browser as a desktop/mobile app. Browser usage remains unchanged.
 
 ### Changes
 
-1. **Upgrade `react-router-dom`** in `package.json` from `^6.30.1` to `^6.30.2` — fixes CVE-2025-68470 (open redirect).
+1. **Install `vite-plugin-pwa`** — Vite plugin that auto-generates a service worker and injects the manifest.
 
-2. **Pin lodash resolution** — add an `overrides` field in `package.json` to force transitive lodash to `>=4.17.23`, fixing CVE-2025-13465:
-   ```json
-   "overrides": {
-     "lodash": ">=4.17.23"
-   }
-   ```
+2. **Update `vite.config.ts`** — Add the PWA plugin with:
+   - App name, theme color, background color from existing manifest
+   - Icon definitions (192×192 and 512×512 using existing `favicon.png`)
+   - Runtime caching strategy for API calls
+   - `registerType: 'autoUpdate'` for seamless updates
 
-3. **CVE-2026-22029** — no action needed, it only affects React Router v7 which this project does not use. If Snyk still flags it, it can be marked as "not applicable."
+3. **Register the service worker in `src/main.tsx`** — Import the virtual `registerSW` module from the plugin.
 
-### Files Modified
-- `package.json`
+4. **Remove `public/manifest.json`** — The plugin generates the manifest automatically; keeping the static file would conflict.
+
+### Files modified
+- `package.json` (add `vite-plugin-pwa`)
+- `vite.config.ts`
+- `src/main.tsx`
+- Delete `public/manifest.json`
 
