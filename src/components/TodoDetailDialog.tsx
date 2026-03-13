@@ -384,9 +384,9 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
             {/* Images */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.images")}</label>
-              {todo.images && todo.images.length > 0 && (
+              {((todo.images && todo.images.length > 0) || pendingPreviews.length > 0) && (
                 <div className="grid grid-cols-3 gap-2">
-                  {todo.images.map((img) => (
+                  {todo.images?.map((img) => (
                     <SignedImage
                       key={img.id}
                       img={img}
@@ -394,6 +394,14 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                       onDelete={onDeleteImage}
                       onClick={(src, alt) => setPreviewImage({ src, alt })}
                     />
+                  ))}
+                  {pendingPreviews.map((p) => (
+                    <div key={p.id} className="relative rounded-lg overflow-hidden border aspect-square cursor-pointer" onClick={() => setPreviewImage({ src: p.blobUrl, alt: p.fileName })}>
+                      <img src={p.blobUrl} alt={p.fileName} className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-background/40 flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
