@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { decode as base64Decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const SAMPLE_RATE = 0.2;
 const FUNCTION_NAME = "images-api";
