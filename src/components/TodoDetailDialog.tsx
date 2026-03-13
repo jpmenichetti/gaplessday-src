@@ -89,19 +89,38 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const [isResizing, setIsResizing] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [pendingPreviews, setPendingPreviews] = useState<{ id: string; blobUrl: string; fileName: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const isSavingNotes = useRef(false);
 
   const prevTodoId = useRef(todo?.id);
+  const prevImageCount = useRef(todo?.images?.length ?? 0);
   useEffect(() => {
     if (todo?.id !== prevTodoId.current) {
       setLocalNotes(todo?.notes || "");
       setLocalTitle(todo?.text || "");
       prevTodoId.current = todo?.id;
       isSavingNotes.current = false;
+      setPendingPreviews([]);
     }
   }, [todo?.id, todo?.notes]);
+
+  // Clear pending previews when server images update (new image arrived from refetch)
+  useEffect(() => {
+    const currentCount = todo?.images?.length ?? 0;
+    if (currentCount > prevImageCount.current && pendingPreviews.length > 0) {
+      setPendingPreviews((prev) => {
+        // Remove oldest preview(s) matching the number of new server images
+        const newImages = currentCount - prevImageCount.current;
+        const remaining = prev.slice(newImages);
+        // Revoke blob URLs for removed previews
+        prev.slice(0, newImages).forEach((p) => URL.revokeObjectURL(p.blobUrl));
+        return remaining;
+      });
+    }
+    prevImageCount.current = currentCount;
+  }, [todo?.images?.length]);
 
   const debouncedUpdateNotes = useCallback((id: string, value: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -175,9 +194,15 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
     onUpdate(todo.id, { urls: (todo.urls || []).filter((u) => u !== url) });
   };
 
+  const addPendingPreview = (file: File) => {
+    const blobUrl = URL.createObjectURL(file);
+    setPendingPreviews((prev) => [...prev, { id: crypto.randomUUID(), blobUrl, fileName: file.name }]);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      addPendingPreview(file);
       onUploadImage(todo.id, file);
       e.target.value = "";
     }
@@ -232,7 +257,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
             setIsDraggingFile(false);
             if (readOnly || !todo) return;
             const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
-            files.forEach((file) => onUploadImage(todo.id, file));
+            files.forEach((file) => { addPendingPreview(file); onUploadImage(todo.id, file); });
           }}
         >
           {isDraggingFile && (
@@ -359,9 +384,9 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
             {/* Images */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("detail.images")}</label>
-              {todo.images && todo.images.length > 0 && (
+              {((todo.images && todo.images.length > 0) || pendingPreviews.length > 0) && (
                 <div className="grid grid-cols-3 gap-2">
-                  {todo.images.map((img) => (
+                  {todo.images?.map((img) => (
                     <SignedImage
                       key={img.id}
                       img={img}
@@ -369,6 +394,14 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
                       onDelete={onDeleteImage}
                       onClick={(src, alt) => setPreviewImage({ src, alt })}
                     />
+                  ))}
+                  {pendingPreviews.map((p) => (
+                    <div key={p.id} className="relative rounded-lg overflow-hidden border aspect-square cursor-pointer" onClick={() => setPreviewImage({ src: p.blobUrl, alt: p.fileName })}>
+                      <img src={p.blobUrl} alt={p.fileName} className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-background/40 flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
