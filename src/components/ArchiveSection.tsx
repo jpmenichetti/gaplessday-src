@@ -1,9 +1,10 @@
 import { Todo, CATEGORY_CONFIG, TodoCategory } from "@/hooks/useTodos";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Archive, ChevronDown, RotateCcw, Trash2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nContext";
+import { startOfDay, subDays, isToday, isYesterday, format } from "date-fns";
 
 const CATEGORY_LABEL_KEYS: Record<TodoCategory, string> = {
   today: "category.today",
@@ -42,6 +44,48 @@ type Props = {
   isLoadingMore?: boolean;
   autoOpen?: boolean;
 };
+
+type DateGroup = {
+  label: string;
+  todos: Todo[];
+};
+
+function groupByArchiveDate(todos: Todo[], t: (key: string) => string): DateGroup[] {
+  const now = new Date();
+  const sevenDaysAgo = startOfDay(subDays(now, 7));
+
+  const buckets: Map<string, { label: string; todos: Todo[] }> = new Map();
+
+  for (const todo of todos) {
+    const date = new Date(todo.removed_at || todo.created_at);
+    let key: string;
+    let label: string;
+
+    if (isToday(date)) {
+      key = "0-today";
+      label = t("archive.today");
+    } else if (isYesterday(date)) {
+      key = "1-yesterday";
+      label = t("archive.yesterday");
+    } else if (date >= sevenDaysAgo) {
+      const dayKey = format(date, "yyyy-MM-dd");
+      key = `2-${dayKey}`;
+      label = format(date, "EEEE, MMM d");
+    } else {
+      key = "3-older";
+      label = t("archive.older");
+    }
+
+    if (!buckets.has(key)) {
+      buckets.set(key, { label, todos: [] });
+    }
+    buckets.get(key)!.todos.push(todo);
+  }
+
+  return Array.from(buckets.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, group]) => group);
+}
 
 export default function ArchiveSection({ todos, totalCount, onOpen, onRestore, onPermanentDelete, onLoadMore, hasMore, isLoadingMore, autoOpen }: Props) {
   const [open, setOpen] = useState(false);
@@ -66,6 +110,8 @@ export default function ArchiveSection({ todos, totalCount, onOpen, onRestore, o
 
   const visibleCount = totalCount ?? todos.length;
   if (visibleCount === 0) return null;
+
+  const groups = groupByArchiveDate(todos, t);
 
   const handleDeleteSingle = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -152,48 +198,59 @@ export default function ArchiveSection({ todos, totalCount, onOpen, onRestore, o
               </Select>
             </div>
           )}
-          {todos.map((todo) => {
-            return (
-              <div
-                key={todo.id}
-                className="flex items-center gap-3 rounded-lg border bg-background/50 p-3 opacity-70 cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => onOpen(todo)}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm", todo.completed && "line-through text-muted-foreground")}>{todo.text}</p>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t(CATEGORY_LABEL_KEYS[todo.category as TodoCategory] || "category.others")}</Badge>
-                    <span>{t("archive.created")} {new Date(todo.created_at).toLocaleDateString()}</span>
-                    {todo.removed_at && <span>• {t("archive.archived")} {new Date(todo.removed_at).toLocaleDateString()}</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {onRestore && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={(e) => { e.stopPropagation(); onRestore(todo.id); }}
-                      title={t("archive.restore")}
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  {onPermanentDelete && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => handleDeleteSingle(e, todo.id)}
-                      title={t("archive.permanentDelete")}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
+
+          {groups.map((group, groupIdx) => (
+            <div key={group.label}>
+              {groupIdx > 0 && <Separator className="my-3" />}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-muted-foreground">{group.label}</span>
+                <span className="text-[10px] text-muted-foreground/70">· {group.todos.length}</span>
               </div>
-            );
-          })}
+              <div className="space-y-2">
+                {group.todos.map((todo) => (
+                  <div
+                    key={todo.id}
+                    className="flex items-center gap-3 rounded-lg border bg-background/50 p-3 opacity-70 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => onOpen(todo)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-sm", todo.completed && "line-through text-muted-foreground")}>{todo.text}</p>
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t(CATEGORY_LABEL_KEYS[todo.category as TodoCategory] || "category.others")}</Badge>
+                        <span>{t("archive.created")} {new Date(todo.created_at).toLocaleDateString()}</span>
+                        {todo.removed_at && <span>• {t("archive.archived")} {new Date(todo.removed_at).toLocaleDateString()}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {onRestore && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          onClick={(e) => { e.stopPropagation(); onRestore(todo.id); }}
+                          title={t("archive.restore")}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {onPermanentDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => handleDeleteSingle(e, todo.id)}
+                          title={t("archive.permanentDelete")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
           {hasMore && onLoadMore && (
             <div className="flex justify-center pt-2">
               <Button

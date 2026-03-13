@@ -1,32 +1,20 @@
 
 
-# Archive Section: Daily Grouping (Revised)
+## Fix Snyk Vulnerabilities
 
-## What changes
+### Changes
 
-Group archived todos by archive date (`removed_at`) with simple date headers separated by a visual separator — no collapsible sub-sections.
+1. **Upgrade `react-router-dom`** in `package.json` from `^6.30.1` to `^6.30.2` — fixes CVE-2025-68470 (open redirect).
 
-## Implementation
+2. **Pin lodash resolution** — add an `overrides` field in `package.json` to force transitive lodash to `>=4.17.23`, fixing CVE-2025-13465:
+   ```json
+   "overrides": {
+     "lodash": ">=4.17.23"
+   }
+   ```
 
-### `src/components/ArchiveSection.tsx`
+3. **CVE-2026-22029** — no action needed, it only affects React Router v7 which this project does not use. If Snyk still flags it, it can be marked as "not applicable."
 
-1. **Group todos into date buckets** using `date-fns` (`startOfDay`, `subDays`, `isToday`, `isYesterday`, `format`):
-   - "Today", "Yesterday", named days for 5 prior days (e.g., "Monday"), "Older" for 7+ days ago.
-   - Use `removed_at` (fallback to `created_at`) as the grouping date.
-   - Skip empty groups.
-
-2. **Render each group** as:
-   - A `<Separator />` between groups (not before the first one).
-   - A simple text header with the day label + count badge (e.g., `Yesterday · 3`).
-   - The existing todo rows underneath, unchanged.
-
-### `src/i18n/translations.ts`
-
-Add keys: `archive.today`, `archive.yesterday`, `archive.older` in both `en` and `es`.
-
-### No backend changes needed.
-
-### Files modified
-- `src/components/ArchiveSection.tsx`
-- `src/i18n/translations.ts`
+### Files Modified
+- `package.json`
 
