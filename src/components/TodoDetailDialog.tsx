@@ -74,6 +74,7 @@ type Props = {
   onUpdate: (id: string, updates: Partial<Todo>) => void;
   onUploadImage: (todoId: string, file: File) => void;
   onDeleteImage: (id: string, storagePath: string) => void;
+  isUploading?: boolean;
   readOnly?: boolean;
   allTags?: string[];
 };
