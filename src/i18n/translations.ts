@@ -182,6 +182,7 @@ const translations: Record<Language, Record<string, string>> = {
     "detail.addTag": "Agregar etiqueta...",
     "detail.addNotes": "Agregar notas adicionales...",
     "detail.uploadImage": "Subir imagen",
+    "detail.uploading": "Subiendo...",
     "detail.dropImage": "Suelta la imagen para subir",
     "detail.moveTo": "Mover a",
     "archive.title": "Archivo",
