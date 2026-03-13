@@ -182,7 +182,7 @@ const Index = () => {
                   />
                 ))}
               </div>
-              <DragOverlay>
+              <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0" } } }) }}>
                 {activeDragTodo ? (
                   <div className="opacity-80 rotate-2 scale-105">
                     <TodoCard
