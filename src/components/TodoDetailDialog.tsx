@@ -79,7 +79,7 @@ type Props = {
   allTags?: string[];
 };
 
-export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, readOnly, allTags = [] }: Props) {
+export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, isUploading, readOnly, allTags = [] }: Props) {
   const { t } = useI18n();
   const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
