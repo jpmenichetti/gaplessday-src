@@ -194,9 +194,15 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
     onUpdate(todo.id, { urls: (todo.urls || []).filter((u) => u !== url) });
   };
 
+  const addPendingPreview = (file: File) => {
+    const blobUrl = URL.createObjectURL(file);
+    setPendingPreviews((prev) => [...prev, { id: crypto.randomUUID(), blobUrl, fileName: file.name }]);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      addPendingPreview(file);
       onUploadImage(todo.id, file);
       e.target.value = "";
     }
