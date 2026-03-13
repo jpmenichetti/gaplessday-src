@@ -89,6 +89,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
   const [isResizing, setIsResizing] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [pendingPreviews, setPendingPreviews] = useState<{ id: string; blobUrl: string; fileName: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const isSavingNotes = useRef(false);
