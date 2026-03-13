@@ -95,13 +95,15 @@ const TodoCard = memo(function TodoCard({ todo, onToggle, onRemove, onOpen, read
         </div>
       </div>
 
-      <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         {!readOnly && (
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onRemove(todo.id)}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); onRemove(todo.id); }}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         )}
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={(e) => { e.stopPropagation(); onOpen(todo); }}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
