@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { decode as base64Decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const SAMPLE_RATE = 0.2;
 const FUNCTION_NAME = "images-api";
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     switch (action) {
       case "upload": {
         const { todoId, fileBase64, fileName, contentType } = params;
-        const bytes = base64Decode(fileBase64);
+        const bytes = decodeBase64(fileBase64);
         const MAX_SIZE = 10 * 1024 * 1024;
         if (bytes.length > MAX_SIZE) { resp = json({ error: "File too large. Maximum size is 10MB." }, 400); break; }
 
