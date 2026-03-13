@@ -18,23 +18,32 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
+        id: "/?app=owldone-pwa-v3",
         name: "OwlDone",
         short_name: "OwlDone",
         start_url: "/",
+        scope: "/",
         display: "standalone",
         background_color: "#1a1a2e",
         theme_color: "#1a1a2e",
         icons: [
           {
-            src: "/pwa-192.png",
+            src: "/pwa-any-192-v3.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
-            src: "/pwa-512.png",
+            src: "/pwa-any-512-v3.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-maskable-512-v3.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
       },
