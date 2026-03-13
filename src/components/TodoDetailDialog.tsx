@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Upload, Link2, ExternalLink, Trash2, GripVertical } from "lucide-react";
+import { X, Plus, Upload, Link2, ExternalLink, Trash2, GripVertical, Loader2 } from "lucide-react";
 import { Todo, TodoCategory, CATEGORY_CONFIG, getImageUrl } from "@/hooks/useTodos";
 import { cn } from "@/lib/utils";
 import { tagColor } from "@/lib/tagColors";
@@ -74,11 +74,12 @@ type Props = {
   onUpdate: (id: string, updates: Partial<Todo>) => void;
   onUploadImage: (todoId: string, file: File) => void;
   onDeleteImage: (id: string, storagePath: string) => void;
+  isUploading?: boolean;
   readOnly?: boolean;
   allTags?: string[];
 };
 
-export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, readOnly, allTags = [] }: Props) {
+export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUploadImage, onDeleteImage, isUploading, readOnly, allTags = [] }: Props) {
   const { t } = useI18n();
   const [tagInput, setTagInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
@@ -374,8 +375,12 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
               {!readOnly && (
                 <>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                  <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()}>
-                    <Upload className="h-3.5 w-3.5" /> {t("detail.uploadImage")}
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()} disabled={isUploading}>
+                    {isUploading ? (
+                      <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("detail.uploading") || "Uploading..."}</>
+                    ) : (
+                      <><Upload className="h-3.5 w-3.5" /> {t("detail.uploadImage")}</>
+                    )}
                   </Button>
                 </>
               )}

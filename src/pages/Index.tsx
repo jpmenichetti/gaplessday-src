@@ -225,6 +225,7 @@ const Index = () => {
         onUpdate={(id, updates) => updateTodo.mutate({ id, ...updates })}
         onUploadImage={(todoId, file) => uploadImage.mutate({ todoId, file })}
         onDeleteImage={(id, storagePath) => deleteImage.mutate({ id, storagePath })}
+        isUploading={uploadImage.isPending}
         readOnly={dialogReadOnly}
         allTags={allTags}
       />
