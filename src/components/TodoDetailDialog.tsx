@@ -47,13 +47,19 @@ function useSignedUrl(path: string) {
 
 function SignedImage({ img, readOnly, onDelete, onClick }: { img: Tables<"todo_images">; readOnly?: boolean; onDelete: (id: string, path: string) => void; onClick: (src: string, alt: string) => void }) {
   const url = useSignedUrl(img.storage_path);
+  const [deleting, setDeleting] = useState(false);
   if (!url) return <div className="rounded-lg border aspect-square bg-muted animate-pulse" />;
   return (
-    <div className="relative group rounded-lg overflow-hidden border aspect-square cursor-pointer" onClick={() => onClick(url, img.file_name)}>
+    <div className={cn("relative group rounded-lg overflow-hidden border aspect-square cursor-pointer transition-opacity", deleting && "opacity-40 pointer-events-none")} onClick={() => onClick(url, img.file_name)}>
       <img src={url} alt={img.file_name} className="h-full w-full object-cover" />
-      {!readOnly && (
+      {deleting && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/40">
+          <Loader2 className="h-5 w-5 animate-spin text-destructive" />
+        </div>
+      )}
+      {!readOnly && !deleting && (
         <button
-          onClick={(e) => { e.stopPropagation(); onDelete(img.id, img.storage_path); }}
+          onClick={(e) => { e.stopPropagation(); setDeleting(true); onDelete(img.id, img.storage_path); }}
           className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         >
           <Trash2 className="h-3 w-3" />
