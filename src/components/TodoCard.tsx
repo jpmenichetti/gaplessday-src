@@ -38,10 +38,10 @@ const TodoCard = memo(function TodoCard({ todo, onToggle, onRemove, onOpen, read
     <div
       style={style}
       className={cn(
-        "group flex items-start gap-3 rounded-lg border p-3 transition-all hover:shadow-sm cursor-pointer bg-background",
+        "group relative flex items-start gap-3 rounded-lg border p-3 transition-all hover:shadow-sm cursor-pointer bg-background",
         todo.completed && "opacity-60",
         overdue && "border-destructive/50 bg-destructive/5",
-        isDragging && "opacity-50 shadow-lg z-50",
+        isDragging && "opacity-0 pointer-events-none",
       )}
       onClick={() => !isDragging && onOpen(todo)}
     >

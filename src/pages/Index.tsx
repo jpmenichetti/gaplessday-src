@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Archive } from "lucide-react";
 import { toast } from "sonner";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, defaultDropAnimationSideEffects } from "@dnd-kit/core";
 import TodoCard from "@/components/TodoCard";
 import OnboardingDialog from "@/components/OnboardingDialog";
 import WeeklyReportSection from "@/components/WeeklyReportSection";
@@ -182,7 +182,7 @@ const Index = () => {
                   />
                 ))}
               </div>
-              <DragOverlay>
+              <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0" } } }) }}>
                 {activeDragTodo ? (
                   <div className="opacity-80 rotate-2 scale-105">
                     <TodoCard
