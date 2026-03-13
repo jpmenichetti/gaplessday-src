@@ -257,7 +257,7 @@ export default function TodoDetailDialog({ todo, open, onClose, onUpdate, onUplo
             setIsDraggingFile(false);
             if (readOnly || !todo) return;
             const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
-            files.forEach((file) => onUploadImage(todo.id, file));
+            files.forEach((file) => { addPendingPreview(file); onUploadImage(todo.id, file); });
           }}
         >
           {isDraggingFile && (
