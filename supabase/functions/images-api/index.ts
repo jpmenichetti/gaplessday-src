@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     switch (action) {
       case "upload": {
         const { todoId, fileBase64, fileName, contentType } = params;
-        const bytes = base64Decode(fileBase64);
+        const bytes = decodeBase64(fileBase64);
         const MAX_SIZE = 10 * 1024 * 1024;
         if (bytes.length > MAX_SIZE) { resp = json({ error: "File too large. Maximum size is 10MB." }, 400); break; }
 
