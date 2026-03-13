@@ -69,6 +69,9 @@ const translations: Record<Language, Record<string, string>> = {
     "archive.confirmDeleteDesc": "This will permanently delete {count} archived todo(s). This action cannot be undone.",
     "archive.confirmDeleteBtn": "Delete permanently",
     "archive.loadMore": "Load more",
+    "archive.today": "Today",
+    "archive.yesterday": "Yesterday",
+    "archive.older": "Older",
 
     // Onboarding
     "onboarding.step1.title": "Welcome to OwlDone!",
