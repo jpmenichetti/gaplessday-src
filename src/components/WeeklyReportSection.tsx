@@ -64,14 +64,14 @@ export default function WeeklyReportSection() {
 
   const handleGenerate = () => {
     generateReport.mutate(undefined, {
-      onSuccess: () => toast(t("report.generated")),
+      onSuccess: () => toast(t("report.generated"), { duration: 4000 }),
       onError: (err) => {
         if (err.message === "no_tasks") {
-          toast(t("report.noTasks"));
+          toast(t("report.noTasks"), { duration: 4000 });
         } else if (err.message === "rate_limited") {
-          toast.error("Rate limited. Please try again later.");
+          toast.error("Rate limited. Please try again later.", { duration: 5000 });
         } else {
-          toast.error("Failed to generate report");
+          toast.error("Failed to generate report", { duration: 5000 });
         }
       },
     });
