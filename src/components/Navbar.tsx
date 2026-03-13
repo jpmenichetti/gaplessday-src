@@ -154,7 +154,7 @@ export default function Navbar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <a
-                    href="https://github.com/jpmenichetti/owldone/issues/new/choose"
+                    href="https://github.com/jpmenichetti/owldone-src/issues/new/choose"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
